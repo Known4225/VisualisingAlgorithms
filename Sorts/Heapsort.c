@@ -11,7 +11,11 @@ https://github.com/Known4225/Heapsort
 typedef struct {
     char keys[5];
     char phase;
-    list_t *sort;
+    int operations;
+    list_t *unsorted;
+    int unsortHighlight;
+    list_t *maxHeap;
+    list_t *sorted;
     double mouseX;
     double mouseY;
     double focalX;
@@ -22,6 +26,8 @@ typedef struct {
     double screenY;
     double screenSize;
     double scrollSpeed;
+    double arraySegmentSize;
+    double nodeSize;
 } Heapsort;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -42,14 +48,18 @@ extern inline double dmod(double a, double modulus) { // always positive mod
 
 void init(Heapsort *selfp, int length) {
     Heapsort self = *selfp;
-    self.sort = list_init();
+    self.unsorted = list_init();
     for (int i = 0; i < length; i++) {
-
+        list_append(self.unsorted, (unitype) randomInt(0, 5 * length), 'i');
     }
     for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
+    self.unsortHighlight = -1;
     self.phase = 0;
+    self.arraySegmentSize = 20;
+    self.nodeSize = 40;
+    self.operations = 0;
     self.mouseX = 0;
     self.mouseY = 0;
     self.screenX = 0;
@@ -65,16 +75,66 @@ void init(Heapsort *selfp, int length) {
 
 void createMaxHeap(Heapsort *selfp) { // creates the max heap
     Heapsort self = *selfp;
-    
+    // printf("%d %d\n", self.unsortHighlight, self.unsorted -> length);
+    if (self.unsortHighlight + 1 <= self.unsorted -> length) { // potential glitch: -1 is not less than 15 if the 15 is an unsigned int, cuz -1 is interpreted as the max int value, even though its type is a signed int
+        self.unsortHighlight += 1;
+        list_append(self.maxHeap, self.unsorted -> data[self.unsortHighlight], 'i');
+    }
+
     *selfp = self;
 }
 
 void heapify(Heapsort *selfp) { // Heapify algorithm sorts the list via the max heap
     Heapsort self = *selfp;
+    for (int i = 0; i < self.maxHeap -> length; i++) {
+        
+    }
+    *selfp = self;
+}
+
+void renderHeap(Heapsort *selfp) {
+    Heapsort self = *selfp;
     
     *selfp = self;
 }
- 
+
+void renderArray(Heapsort *selfp) {
+    Heapsort self = *selfp;
+
+    /* unsorted array */
+    turtlePenColor(0, 0, 0);
+    turtlePenSize(2 * self.screenSize);
+    for (int i = 0; i < self.unsorted -> length; i++) {
+        int xpos = (i - self.unsorted -> length / 2.0) * self.arraySegmentSize;
+        if (self.unsortHighlight == i) {
+            turtleQuad((xpos - self.arraySegmentSize / 2 + self.screenX), (160 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize / 2 + self.screenX), (160 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize / 2 + self.screenX), (140 + self.screenY) * self.screenSize,
+            (xpos - self.arraySegmentSize / 2 + self.screenX), (140 + self.screenY) * self.screenSize,
+            19, 236, 48, 0);
+        }
+        turtleGoto((xpos - self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize);
+        turtlePenDown();
+        turtleGoto((xpos - self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (140 + self.screenY) * self.screenSize);
+        turtlePenUp();
+        char num[12];
+        sprintf(num, "%d", self.unsorted -> data[i].i);
+        textGLWriteString(num, (xpos + self.screenX) * self.screenSize, (150 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
+        sprintf(num, "%d", i + 1);
+        textGLWriteString(num, (xpos + self.screenX) * self.screenSize, (167 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
+    }
+    turtleGoto(((self.unsorted -> length / -2.0 - 0.5) * self.arraySegmentSize + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize);
+    turtlePenDown();
+    turtleGoto(((self.unsorted -> length / 2.0 - 0.5) * self.arraySegmentSize + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / 2.0 - 0.5) * self.arraySegmentSize + self.screenX) * self.screenSize, (140 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / -2.0 - 0.5) * self.arraySegmentSize + self.screenX) * self.screenSize, (140 + self.screenY) * self.screenSize);
+    turtlePenUp();
+
+    /* max heap */
+
+    *selfp = self;
+}
+
 void mouseTick(Heapsort *selfp) {
     Heapsort self = *selfp;
     turtleGetMouseCoords(); // get the mouse coordinates (turtle.mouseX, turtle.mouseY)
@@ -118,6 +178,11 @@ void hotkeyTick(Heapsort *selfp) {
     if (turtleKeyPressed(GLFW_KEY_SPACE)) { // space (dummy)
         if (self.keys[1] == 0) {
             self.keys[1] = 1;
+            if (self.phase) {
+                heapify(&self);
+            } else {
+                createMaxHeap(&self);
+            }
         }
     } else {
         self.keys[1] = 0;
@@ -149,7 +214,7 @@ int main(int argc, char *argv[]) {
     int tps = 60; // ticks per second (locked to fps in this case)
     clock_t start, end;
 
-    turtleBgColor(50, 50, 50);
+    turtleBgColor(150, 150, 150);
     Heapsort obj; // principle object
     srand(time(NULL)); // randomiser init seed
     if (argc == 1) {
@@ -166,11 +231,7 @@ int main(int argc, char *argv[]) {
         mouseTick(&obj);
         scrollTick(&obj);
         hotkeyTick(&obj);
-        if (obj.phase) {
-            heapify(&obj);
-        } else {
-            createMaxHeap(&obj);
-        }
+        renderArray(&obj);
         turtleUpdate(); // update the screen
         end = clock();
         // printf("ms: %d\n", end - start);
