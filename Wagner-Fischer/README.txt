@@ -8,4 +8,7 @@ Wagner-Fischer.exe {string1} {string2}
 Use the mouse to move around
 Use space to step through the animation
 
-Linux: figure it out idk
+Linux:
+gcc Wagner-Fischer.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o Wagner-Fischer.o
+
+./Wagner-Fischer.o {string1} {string2}
