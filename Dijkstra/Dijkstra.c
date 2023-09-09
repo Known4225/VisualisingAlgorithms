@@ -491,7 +491,7 @@ void mouseTick(Dijkstra *selfp) {
                 }
             }
             //self.selected = -1;
-            if (self.selected != -1 && ((Node *) (self.nodes -> data[self.selected].p)) -> xpos == self.focalCSX && ((Node *) (self.nodes -> data[self.selected].p)) -> ypos == self.focalCSY) {
+            if (self.selected != -1 && fabs(((Node *) (self.nodes -> data[self.selected].p)) -> xpos - self.focalCSX) < 0.01 && fabs(((Node *) (self.nodes -> data[self.selected].p)) -> ypos - self.focalCSY) < 0.01) {
                 //printf("clicked on %d\n", self.selected);
                 if (self.toggle == 0) {
                     self.start = self.selected;
@@ -505,7 +505,7 @@ void mouseTick(Dijkstra *selfp) {
                 }
                 //printf("start: %d, end %d\n", self.start, self.end);
             }
-            if (self.selected == -1 && self.focalCSX == self.screenX && self.focalCSY == self.screenY && self.stepNum == 0) {
+            if (self.selected == -1 && fabs(self.focalCSX - self.screenX) < 0.01 && fabs(self.focalCSY - self.screenY) && self.stepNum == 0) {
                 self.toggle = 0;
                 self.start = -1;
                 self.end = -1;
