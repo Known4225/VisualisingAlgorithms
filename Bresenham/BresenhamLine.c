@@ -75,16 +75,16 @@ void renderGrid(Line *selfp) { // renders the grid
     // printf("%lf\n", (640 * self.screenSize / self.gridSize));
     turtlePenColor(30, 30, 30);
     turtlePenSize(self.screenSize * 2);
-    double x = -320 - dmod(self.screenX, self.gridSize);
-    double y = 180 - dmod(self.screenY, self.gridSize);
-    for (int i = 0; i < (640 * self.screenSize / self.gridSize); i++) {
+    double x = -320 + dmod(self.screenX * self.screenSize, self.gridSize * self.screenSize);
+    double y = 180 + dmod(self.screenY * self.screenSize, self.gridSize * self.screenSize);
+    for (int i = -1; i < (640 / (self.screenSize * self.gridSize)); i++) {
         turtleGoto(x, 180);
         turtlePenDown();
         turtleGoto(x, -180);
         turtlePenUp();
         x += self.screenSize * self.gridSize;
     }
-    for (int i = 0; i < (360 * self.screenSize / self.gridSize); i++) {
+    for (int i = -1; i < (360 / (self.screenSize * self.gridSize)); i++) {
         turtleGoto(-320, y);
         turtlePenDown();
         turtleGoto(320, y);
@@ -96,25 +96,27 @@ void renderGrid(Line *selfp) { // renders the grid
 
 void renderPixels(Line *selfp) { // renders all coloured in pixels
     Line self = *selfp;
+    double correctionX = dmod(self.screenSize, self.gridSize * self.screenSize);
+    double correctionY = dmod(self.screenSize, self.gridSize * self.screenSize);
     if (self.pixel1[0] != 2147483647) {
-        turtleQuad((self.pixel1[0] + self.screenX) * self.screenSize, (self.pixel1[1] + self.screenY) * self.screenSize, 
-        (self.pixel1[0] + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] + self.screenY) * self.screenSize, 
-        (self.pixel1[0] + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] + self.gridSize + self.screenY) * self.screenSize,
-        (self.pixel1[0] + self.screenX) * self.screenSize, (self.pixel1[1] + self.gridSize + self.screenY) * self.screenSize,
+        turtleQuad((self.pixel1[0] * self.gridSize + correctionX + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.screenY) * self.screenSize, 
+        (self.pixel1[0] * self.gridSize + correctionX + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.screenY) * self.screenSize, 
+        (self.pixel1[0] * self.gridSize + correctionX + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.gridSize + self.screenY) * self.screenSize,
+        (self.pixel1[0] * self.gridSize + correctionX + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + correctionY + self.screenY) * self.screenSize,
         0, 0, 0, 0);
     }
     if (self.pixel2[0] != 2147483647) {
-        turtleQuad((self.pixel2[0] + self.screenX) * self.screenSize, (self.pixel2[1] + self.screenY) * self.screenSize, 
-        (self.pixel2[0] + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] + self.screenY) * self.screenSize, 
-        (self.pixel2[0] + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] + self.gridSize + self.screenY) * self.screenSize,
-        (self.pixel2[0] + self.screenX) * self.screenSize, (self.pixel2[1] + self.gridSize + self.screenY) * self.screenSize,
+        turtleQuad((self.pixel2[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixel2[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixel2[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
+        (self.pixel2[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         0, 0, 0, 0);
     }
     for (int i = 0; i < self.pixels -> length; i += 2) {
-        turtleQuad((self.pixels -> data[i].i + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i + self.screenY) * self.screenSize, 
-        (self.pixels -> data[i].i + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i + self.screenY) * self.screenSize, 
-        (self.pixels -> data[i].i + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i + self.gridSize + self.screenY) * self.screenSize,
-        (self.pixels -> data[i].i + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i + self.gridSize + self.screenY) * self.screenSize,
+        turtleQuad((self.pixels -> data[i].i + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixels -> data[i].i * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixels -> data[i].i * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
+        (self.pixels -> data[i].i * self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         0, 0, 0, 0);
     }
     *selfp = self;
@@ -131,14 +133,7 @@ void mouseTick(Line *selfp) {
         if (self.keys[0] == 0) {
             self.keys[0] = 1;
             /* first tick of mouse click */
-            if (self.toggle) {
-                self.pixel1[0] = floor((self.mouseX + self.screenX) * self.screenSize / self.gridSize);
-                self.pixel1[1] = floor((self.mouseY + self.screenY) * self.screenSize / self.gridSize);
-            } else {
-                self.pixel2[0] = floor((self.mouseX + self.screenX) * self.screenSize / self.gridSize);
-                self.pixel2[1] = floor((self.mouseY + self.screenY) * self.screenSize / self.gridSize);
-            }
-
+            
             self.focalX = self.mouseX;
             self.focalY = self.mouseY;
             self.focalCSX = self.screenX;
@@ -151,10 +146,18 @@ void mouseTick(Line *selfp) {
         }
     } else {
         /* mouse is not pressed */
-        if (self.keys == 1) {
+        if (self.keys[0] == 1) {
             self.keys[0] = 0;
             if (fabs(self.mouseX - self.focalX) < 0.01 && fabs(self.mouseY - self.focalY) < 0.01) {
-
+                if (self.toggle) {
+                    self.pixel1[0] = floor((self.mouseX + self.screenX) / (self.screenSize * self.gridSize));
+                    self.pixel1[1] = floor((self.mouseY + self.screenY) / (self.screenSize * self.gridSize));
+                    self.toggle = 0;
+                } else {
+                    self.pixel2[0] = floor((self.mouseX + self.screenX) / (self.screenSize * self.gridSize));
+                    self.pixel2[1] = floor((self.mouseY + self.screenY) / (self.screenSize * self.gridSize));
+                    self.toggle = 1;
+                }
             }
         }
     }
