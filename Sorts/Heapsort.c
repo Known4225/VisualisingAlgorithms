@@ -108,7 +108,7 @@ void renderHeap(Heapsort *selfp) {
         turtlePenColor(100, 100, 100);
         turtlePenDown();
         turtlePenUp();
-        turtlePenColor(0, 0, 0);
+        turtlePenColor(150, 150, 150);
         char num[12];
         sprintf(num, "%d", self.maxHeap -> data[i].i);
         textGLWriteString(num, (xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.nodeSize * self.screenSize * 0.4, 50);

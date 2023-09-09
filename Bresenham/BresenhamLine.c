@@ -73,10 +73,17 @@ void init(Line *selfp, double gridSize) {
 void renderGrid(Line *selfp) { // renders the grid
     Line self = *selfp;
     // printf("%lf\n", (640 * self.screenSize / self.gridSize));
+    /* the point 0, 0 is actually the position at (self.screenX) * self.screenSize
+    so if we want our lines to cross (0, 0) we need it to go to self.screenX * self.screenSize and then move toward the visual screen in self.gridSize * self.screenSize steps
+    the number of steps it will take is equal to floor((self.screenX * self.screenSize) / (self.screenSize * self.gridSize)), or floor(self.screenX / self.gridSize)
+    then it will move an additional floor(320 / (self.screenSize * self.gridSize))
+    */
     turtlePenColor(30, 30, 30);
     turtlePenSize(self.screenSize * 2);
-    double x = -320 + dmod(self.screenX * self.screenSize, self.gridSize * self.screenSize);
-    double y = 180 + dmod(self.screenY * self.screenSize, self.gridSize * self.screenSize);
+    double startX = self.screenSize * (self.screenX - self.gridSize * (floor(self.screenX / self.gridSize) + 1 + floor(320 / (self.screenSize * self.gridSize))));
+    double startY = self.screenSize * (self.screenY - self.gridSize * (floor(self.screenY / self.gridSize) + 1 - floor(180 / (self.screenSize * self.gridSize))));
+    double x = startX;
+    double y = startY;
     for (int i = -1; i < (640 / (self.screenSize * self.gridSize)); i++) {
         turtleGoto(x, 180);
         turtlePenDown();
@@ -96,13 +103,13 @@ void renderGrid(Line *selfp) { // renders the grid
 
 void renderPixels(Line *selfp) { // renders all coloured in pixels
     Line self = *selfp;
-    double correctionX = dmod(self.screenSize, self.gridSize * self.screenSize);
-    double correctionY = dmod(self.screenSize, self.gridSize * self.screenSize);
+    double correctionX = 0;
+    double correctionY = 0;
     if (self.pixel1[0] != 2147483647) {
-        turtleQuad((self.pixel1[0] * self.gridSize + correctionX + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.screenY) * self.screenSize, 
-        (self.pixel1[0] * self.gridSize + correctionX + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.screenY) * self.screenSize, 
-        (self.pixel1[0] * self.gridSize + correctionX + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + correctionY + self.gridSize + self.screenY) * self.screenSize,
-        (self.pixel1[0] * self.gridSize + correctionX + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + correctionY + self.screenY) * self.screenSize,
+        turtleQuad((self.pixel1[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixel1[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.screenY) * self.screenSize, 
+        (self.pixel1[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
+        (self.pixel1[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         0, 0, 0, 0);
     }
     if (self.pixel2[0] != 2147483647) {
@@ -150,13 +157,21 @@ void mouseTick(Line *selfp) {
             self.keys[0] = 0;
             if (fabs(self.mouseX - self.focalX) < 0.01 && fabs(self.mouseY - self.focalY) < 0.01) {
                 if (self.toggle) {
-                    self.pixel1[0] = floor((self.mouseX + self.screenX) / (self.screenSize * self.gridSize));
-                    self.pixel1[1] = floor((self.mouseY + self.screenY) / (self.screenSize * self.gridSize));
-                    self.toggle = 0;
+                    int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
+                    int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
+                    if (x != self.pixel2[0] || y != self.pixel2[1]) {
+                        self.pixel1[0] = x;
+                        self.pixel1[1] = y;
+                        self.toggle = 0;
+                    }
                 } else {
-                    self.pixel2[0] = floor((self.mouseX + self.screenX) / (self.screenSize * self.gridSize));
-                    self.pixel2[1] = floor((self.mouseY + self.screenY) / (self.screenSize * self.gridSize));
-                    self.toggle = 1;
+                    int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
+                    int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
+                    if (x != self.pixel1[0] || y != self.pixel1[1]) {
+                        self.pixel2[0] = x;
+                        self.pixel2[1] = y;
+                        self.toggle = 1;
+                    }
                 }
             }
         }
@@ -168,11 +183,13 @@ void scrollTick(Line *selfp) {
     Line self = *selfp;
     double mouseWheel = turtleMouseWheel(); // behavior is a bit different for the scroll wheel
     if (mouseWheel > 0) {
+        /* zoom in */
         self.screenX -= (turtle.mouseX * (-1 / self.scrollSpeed + 1)) / self.screenSize;
         self.screenY -= (turtle.mouseY * (-1 / self.scrollSpeed + 1)) / self.screenSize;
         self.screenSize *= self.scrollSpeed;
     }
     if (mouseWheel < 0) {
+        /* zoom out */
         self.screenSize /= self.scrollSpeed;
         self.screenX += (turtle.mouseX * (-1 / self.scrollSpeed + 1)) / self.screenSize;
         self.screenY += (turtle.mouseY * (-1 / self.scrollSpeed + 1)) / self.screenSize;
@@ -197,6 +214,7 @@ void hotkeyTick(Line *selfp) {
                 self.pixel1[i] = 2147483647;
                 self.pixel2[i] = 2147483647;
             }
+            self.toggle = 0;
         }
     } else {
         self.keys[2] = 0;
