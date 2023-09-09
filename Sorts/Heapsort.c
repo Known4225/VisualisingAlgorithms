@@ -49,6 +49,8 @@ extern inline double dmod(double a, double modulus) { // always positive mod
 void init(Heapsort *selfp, int length) {
     Heapsort self = *selfp;
     self.unsorted = list_init();
+    self.maxHeap = list_init();
+    self.sorted = list_init();
     for (int i = 0; i < length; i++) {
         list_append(self.unsorted, (unitype) randomInt(0, 5 * length), 'i');
     }
@@ -58,7 +60,7 @@ void init(Heapsort *selfp, int length) {
     self.unsortHighlight = -1;
     self.phase = 0;
     self.arraySegmentSize = 20;
-    self.nodeSize = 40;
+    self.nodeSize = 20;
     self.operations = 0;
     self.mouseX = 0;
     self.mouseY = 0;
@@ -78,7 +80,8 @@ void createMaxHeap(Heapsort *selfp) { // creates the max heap
     // printf("%d %d\n", self.unsortHighlight, self.unsorted -> length);
     if (self.unsortHighlight + 1 <= self.unsorted -> length) { // potential glitch: -1 is not less than 15 if the 15 is an unsigned int, cuz -1 is interpreted as the max int value, even though its type is a signed int
         self.unsortHighlight += 1;
-        list_append(self.maxHeap, self.unsorted -> data[self.unsortHighlight], 'i');
+        if (self.unsortHighlight + 1 <= self.unsorted -> length)
+            list_append(self.maxHeap, self.unsorted -> data[self.unsortHighlight], 'i');
     }
 
     *selfp = self;
@@ -86,15 +89,30 @@ void createMaxHeap(Heapsort *selfp) { // creates the max heap
 
 void heapify(Heapsort *selfp) { // Heapify algorithm sorts the list via the max heap
     Heapsort self = *selfp;
-    for (int i = 0; i < self.maxHeap -> length; i++) {
-        
-    }
+    
     *selfp = self;
 }
 
 void renderHeap(Heapsort *selfp) {
     Heapsort self = *selfp;
-    
+    for (int i = 0; i < self.maxHeap -> length; i++) {
+        int log2 = floor(log(i + 1) / log(2));
+        double xpos = (i + 1 - log2) * self.nodeSize * 3 - pow(2, log2) * self.nodeSize * 3;
+        double ypos = 120 - log2 * self.nodeSize * 3;
+        turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
+        turtlePenColor(0, 0, 0);
+        turtlePenSize(self.nodeSize * self.screenSize);
+        turtlePenDown();
+        turtlePenUp();
+        turtlePenSize(self.nodeSize * self.screenSize * 0.9);
+        turtlePenColor(100, 100, 100);
+        turtlePenDown();
+        turtlePenUp();
+        turtlePenColor(0, 0, 0);
+        char num[12];
+        sprintf(num, "%d", self.maxHeap -> data[i].i);
+        textGLWriteString(num, (xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.nodeSize * self.screenSize * 0.4, 50);
+    }
     *selfp = self;
 }
 
@@ -105,12 +123,12 @@ void renderArray(Heapsort *selfp) {
     turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
     for (int i = 0; i < self.unsorted -> length; i++) {
-        int xpos = (i - self.unsorted -> length / 2.0) * self.arraySegmentSize;
+        double xpos = (i - self.unsorted -> length / 2.0) * self.arraySegmentSize;
         if (self.unsortHighlight == i) {
-            turtleQuad((xpos - self.arraySegmentSize / 2 + self.screenX), (160 + self.screenY) * self.screenSize,
-            (xpos + self.arraySegmentSize / 2 + self.screenX), (160 + self.screenY) * self.screenSize,
-            (xpos + self.arraySegmentSize / 2 + self.screenX), (140 + self.screenY) * self.screenSize,
-            (xpos - self.arraySegmentSize / 2 + self.screenX), (140 + self.screenY) * self.screenSize,
+            turtleQuad((xpos - self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (140 + self.screenY) * self.screenSize,
+            (xpos - self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (140 + self.screenY) * self.screenSize,
             19, 236, 48, 0);
         }
         turtleGoto((xpos - self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (160 + self.screenY) * self.screenSize);
@@ -232,6 +250,7 @@ int main(int argc, char *argv[]) {
         scrollTick(&obj);
         hotkeyTick(&obj);
         renderArray(&obj);
+        renderHeap(&obj);
         turtleUpdate(); // update the screen
         end = clock();
         // printf("ms: %d\n", end - start);
