@@ -42,6 +42,7 @@ typedef struct {
     list_t *barGoto;
     list_t *barLength;
     list_t *barRecord;
+    double animationSpeed;
 } Heapsort;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -112,6 +113,7 @@ void init(Heapsort *selfp, int length) {
         list_append(self.barRecord, (unitype) i, 'i');
         xpos += self.arraySegmentSize;
     }
+    self.animationSpeed = 0.15;
     *selfp = self;
 }
 
@@ -213,7 +215,7 @@ void renderHeap(Heapsort *selfp) {
     int depth = ceil(log(self.loaded + 1) / log(2)); // depth of the tree
     double currentAngle = self.maximumAngle / pow(self.angleChange, depth - 1);
     int oldLog = 0;
-    double ypos = 90;
+    double ypos = 110;
     for (int i = 0; i < self.loaded; i++) { // first loop: render connections
         int log2 = floor(log(i + 1) / log(2));
         // double xpos = (pow(2, log2) - 1) * self.nodeSize * -1 + (self.nodeSize * 2 * (i + 1 - pow(2, log2))); // naive approach
@@ -242,7 +244,7 @@ void renderHeap(Heapsort *selfp) {
         list_append(xposList, (unitype) xpos, 'd');
     }
     oldLog = 0;
-    ypos = 90;
+    ypos = 110;
     for (int i = 0; i < self.loaded; i++) { // second loop: render nodes
         int log2 = floor(log(i + 1) / log(2));
         if (log2 > oldLog) {
@@ -277,7 +279,7 @@ void renderHeap(Heapsort *selfp) {
 
 void renderArray(Heapsort *selfp) {
     Heapsort self = *selfp;
-    double ypos = 125;
+    double ypos = 145;
     double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize;
     turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
@@ -318,7 +320,7 @@ void renderArray(Heapsort *selfp) {
 
 void renderBar(Heapsort *selfp) {
     Heapsort self = *selfp;
-    double ypos = 170;
+    double ypos = 190;
     turtlePenSize(self.arraySegmentSize * 0.9 * self.screenSize);
     for (int i = 0; i < self.toSort -> length; i++) {
         double hue = ((double) (self.barLength -> data[i].i * 360) / (self.toSort -> length * 5)); // complicated math to convert HSV to RGB
@@ -356,7 +358,7 @@ void renderBar(Heapsort *selfp) {
             B = X;
         }
         turtlePenColor((R + m) * 255, (G + m) * 255, (B + m) * 255);
-        self.barPosition -> data[i].d = self.barPosition -> data[i].d + (self.barGoto -> data[i].d - self.barPosition -> data[i].d) * 0.25;
+        self.barPosition -> data[i].d = self.barPosition -> data[i].d + (self.barGoto -> data[i].d - self.barPosition -> data[i].d) * self.animationSpeed;
         turtleGoto((self.barPosition -> data[i].d + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((self.barPosition -> data[i].d + self.screenX) * self.screenSize, (ypos + self.barLength -> data[i].i * self.barScale + self.screenY) * self.screenSize);
