@@ -71,8 +71,6 @@ void init(Heapsort *selfp, int length) {
         self.keys[i] = 0;
     }
 
-    
-
     self.loaded = 0;
     self.highlight = -1;
     self.highlightCyan = length;
@@ -96,8 +94,6 @@ void init(Heapsort *selfp, int length) {
     self.focalCSX = 0;
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
-
-    
 
     /* bar things */
     self.barScale = 13.5 / log(length);
@@ -161,7 +157,6 @@ void createMaxHeap(Heapsort *selfp) { // creates the max heap
                 self.phase += 1;
         }
     }
-
     *selfp = self;
 }
 
