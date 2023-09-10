@@ -61,6 +61,10 @@ void init(Heapsort *selfp, int length) {
     for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
+
+    /* bar things */
+    
+
     self.loaded = 0;
     self.highlight = -1;
     self.highlightCyan = length;
@@ -85,7 +89,7 @@ void init(Heapsort *selfp, int length) {
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
 
-    self.barScale = 5;
+    self.barScale = 13.5 / log(length);
     *selfp = self;
 }
 
@@ -151,6 +155,8 @@ void heapify(Heapsort *selfp) { // Heapify algorithm sorts the list via the max 
             self.highlightCyan = 0;
             self.treeHighlight = -1;
             self.treeHighlightCyan = -1;
+            printf("Operations: %d\n", self.operations);
+            self.phase = -1;
         } else {
             self.phase += 1;
         }
@@ -272,9 +278,43 @@ void renderBar(Heapsort *selfp) {
     Heapsort self = *selfp;
     double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize + self.arraySegmentSize * 0.5;
     double ypos = 170;
-    turtlePenSize(10 * self.screenSize);
+    turtlePenSize(self.arraySegmentSize * 0.9 * self.screenSize);
     for (int i = 0; i < self.toSort -> length; i++) {
-        turtlePenColor(0, 0, 0);
+        double hue = ((double) (self.toSort -> data[i].i * 360) / (self.toSort -> length * 5)); // complicated math to convert HSV to RGB
+        double saturation = 0.5;
+        double value = 0.9;
+        double C = value * saturation;
+        double X = C * (1 - fabs(fmod((hue / 60), 2) - 1));
+        double m = value - C;
+        double R;
+        double G;
+        double B;
+        if (hue < 60) {
+            R = C;
+            G = X;
+            B = 0;
+        } else if (hue < 120) {
+            R = X;
+            G = C;
+            B = 0;
+        } else if (hue < 180) {
+            R = 0;
+            G = C;
+            B = X;
+        } else if (hue < 240) {
+            R = 0;
+            G = X;
+            B = C;
+        } else if (hue < 300) {
+            R = X;
+            G = 0;
+            B = C;
+        } else {
+            R = C;
+            G = 0;
+            B = X;
+        }
+        turtlePenColor((R + m) * 255, (G + m) * 255, (B + m) * 255);
         turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.toSort -> data[i].i * self.barScale + self.screenY) * self.screenSize);
@@ -324,10 +364,10 @@ void scrollTick(Heapsort *selfp) {
 
 void hotkeyTick(Heapsort *selfp) {
     Heapsort self = *selfp;
-    if (turtleKeyPressed(GLFW_KEY_SPACE)) { // space to advance animation
+    if (turtleKeyPressed(GLFW_KEY_SPACE) && self.phase > -1) { // space to advance animation
         if (self.keys[1] == 0) {
+            self.operations += 1;
             self.keys[1] = 1;
-            
             if (self.phase) {
                 heapify(&self);
             } else {
