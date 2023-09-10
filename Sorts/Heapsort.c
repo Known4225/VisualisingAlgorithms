@@ -6,6 +6,10 @@ Heapsort visualisation
 Adapted from my python project
 https://github.com/Known4225/Heapsort
 
+The bars color and animation are inspired by MathMathMath's scratch project:
+https://scratch.mit.edu/projects/149793697/
+Which is itself inspired by the original sound of sorting
+https://www.youtube.com/watch?v=kPRA0W1kECg
 */
 
 typedef struct {
@@ -34,6 +38,10 @@ typedef struct {
     double maximumAngle;
     double angleChange;
     double barScale;
+    list_t *barPosition;
+    list_t *barGoto;
+    list_t *barLength;
+    list_t *barRecord;
 } Heapsort;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -62,7 +70,6 @@ void init(Heapsort *selfp, int length) {
         self.keys[i] = 0;
     }
 
-    /* bar things */
     
 
     self.loaded = 0;
@@ -89,17 +96,58 @@ void init(Heapsort *selfp, int length) {
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
 
+    
+
+    /* bar things */
     self.barScale = 13.5 / log(length);
+    double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize + self.arraySegmentSize * 0.5;
+    self.barPosition = list_init();
+    self.barGoto = list_init();
+    self.barLength = list_init();
+    self.barRecord = list_init();
+    for (int i = 0; i < length; i++) {
+        list_append(self.barPosition, (unitype) xpos, 'd');
+        list_append(self.barGoto, (unitype) xpos, 'd');
+        list_append(self.barLength, self.toSort -> data[i], 'i');
+        list_append(self.barRecord, (unitype) i, 'i');
+        xpos += self.arraySegmentSize;
+    }
     *selfp = self;
 }
 
-void createunsorted(Heapsort *selfp) { // creates the max heap
+void swap(Heapsort *selfp, int index1, int index2) {
+    Heapsort self = *selfp;
+
+    unitype temp = self.toSort -> data[index1];
+    self.toSort -> data[index1] = self.toSort -> data[index2];
+    self.toSort -> data[index2] = temp;
+
+    int swap1 = -1;
+    int swap2 = -1;
+    int i = 0;
+    while(swap1 < 0 || swap2 < 0) {
+        if (self.barRecord -> data[i].i == index1) {
+            swap1 = i;
+        }
+        if (self.barRecord -> data[i].i == index2) {
+            swap2 = i;
+        }
+        i++;
+    }
+    temp = self.barGoto -> data[swap1];
+    self.barGoto -> data[swap1] = self.barGoto -> data[swap2];
+    self.barGoto -> data[swap2] = temp;
+    temp = self.barRecord -> data[swap1];
+    self.barRecord -> data[swap1] = self.barRecord -> data[swap2];
+    self.barRecord -> data[swap2] = temp;
+    *selfp = self;
+}
+
+void createMaxHeap(Heapsort *selfp) { // creates the max heap
     Heapsort self = *selfp;
     // printf("%d %d\n", self.highlight, self.toSort -> length);
     if (self.treeHighlight > 0 && self.toSort -> data[self.treeHighlight].d > self.toSort -> data[(self.treeHighlight + 1) / 2 - 1].d) {
-        unitype temp = self.toSort -> data[self.treeHighlight];
-        self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) / 2 - 1];
-        self.toSort -> data[(self.treeHighlight + 1) / 2 - 1] = temp;
+        swap(&self, self.treeHighlight, (self.treeHighlight + 1) / 2 - 1);
         self.treeHighlight = (self.treeHighlight + 1) / 2 - 1;
     } else {
         if (self.highlight + 1 <= self.toSort -> length) { // potential glitch: -1 is not less than 15 if the 15 is an unsigned int, cuz -1 is interpreted as the max int value, even though its type is a signed int
@@ -120,29 +168,23 @@ void heapify(Heapsort *selfp) { // Heapify algorithm sorts the list via the max 
     if (self.phase > 2) {
         if ((self.treeHighlight + 1) * 2 - 1 < self.sorted && (self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d || self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2].d)) {
             if (self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d > self.toSort -> data[(self.treeHighlight + 1) * 2].d) {
-                unitype temp = self.toSort -> data[self.treeHighlight];
-                self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2 - 1];
-                self.toSort -> data[(self.treeHighlight + 1) * 2 - 1] = temp;
+                swap(&self, self.treeHighlight, (self.treeHighlight + 1) * 2 - 1);
                 self.treeHighlight = (self.treeHighlight + 1) * 2 - 1;
             } else {
-                unitype temp = self.toSort -> data[self.treeHighlight];
-                self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2];
-                self.toSort -> data[(self.treeHighlight + 1) * 2] = temp;
+                swap(&self, self.treeHighlight, (self.treeHighlight + 1) * 2);
+
                 self.treeHighlight = (self.treeHighlight + 1) * 2;
             }
         } else if ((self.treeHighlight + 1) * 2 - 1 == self.sorted && self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d) { // special case: only left node is available and is larger than parent
-            unitype temp = self.toSort -> data[self.treeHighlight];
-            self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2 - 1];
-            self.toSort -> data[(self.treeHighlight + 1) * 2 - 1] = temp;
+            swap(&self, self.treeHighlight, (self.treeHighlight + 1) * 2 - 1);
             self.treeHighlight = (self.treeHighlight + 1) * 2 - 1;
         } else {
             self.phase = 1;
             heapify(&self);
         }
     } else if (self.phase > 1) {
-        unitype temp = self.toSort -> data[self.sorted];
-        self.toSort -> data[self.sorted] = self.toSort -> data[0];
-        self.toSort -> data[0] = temp;
+        swap(&self, self.sorted, 0);
+
         self.treeHighlight = 0;
         self.treeHighlightCyan = self.sorted;
         self.highlightCyan = self.sorted;
@@ -276,11 +318,10 @@ void renderArray(Heapsort *selfp) {
 
 void renderBar(Heapsort *selfp) {
     Heapsort self = *selfp;
-    double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize + self.arraySegmentSize * 0.5;
     double ypos = 170;
     turtlePenSize(self.arraySegmentSize * 0.9 * self.screenSize);
     for (int i = 0; i < self.toSort -> length; i++) {
-        double hue = ((double) (self.toSort -> data[i].i * 360) / (self.toSort -> length * 5)); // complicated math to convert HSV to RGB
+        double hue = ((double) (self.barLength -> data[i].i * 360) / (self.toSort -> length * 5)); // complicated math to convert HSV to RGB
         double saturation = 0.5;
         double value = 0.9;
         double C = value * saturation;
@@ -315,11 +356,14 @@ void renderBar(Heapsort *selfp) {
             B = X;
         }
         turtlePenColor((R + m) * 255, (G + m) * 255, (B + m) * 255);
-        turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
+        self.barPosition -> data[i].d = self.barPosition -> data[i].d + (self.barGoto -> data[i].d - self.barPosition -> data[i].d) * 0.25;
+        turtleGoto((self.barPosition -> data[i].d + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
         turtlePenDown();
-        turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.toSort -> data[i].i * self.barScale + self.screenY) * self.screenSize);
+        turtleGoto((self.barPosition -> data[i].d + self.screenX) * self.screenSize, (ypos + self.barLength -> data[i].i * self.barScale + self.screenY) * self.screenSize);
         turtlePenUp();
-        xpos += self.arraySegmentSize;
+        if (fabs(self.barGoto -> data[i].d - self.barPosition -> data[i].d) < 0.1) {
+            self.barPosition -> data[i] = self.barGoto -> data[i];
+        }
     }
     *selfp = self;
 }
@@ -371,7 +415,7 @@ void hotkeyTick(Heapsort *selfp) {
             if (self.phase) {
                 heapify(&self);
             } else {
-                createunsorted(&self);
+                createMaxHeap(&self);
             }
         } else {
             self.keys[2] += 1;
