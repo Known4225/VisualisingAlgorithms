@@ -12,13 +12,13 @@ typedef struct {
     char keys[5];
     char phase;
     int operations;
-    list_t *toSort;
-    int loaded;
+    list_t *unsorted;
     int highlight;
     int highlightCyan;
     int treeHighlight;
     int treeHighlightCyan;
     int sorted;
+    list_t *maxHeap;
     double mouseX;
     double mouseY;
     double focalX;
@@ -53,14 +53,14 @@ extern inline double dmod(double a, double modulus) { // always positive mod
 
 void init(Heapsort *selfp, int length) {
     Heapsort self = *selfp;
-    self.toSort = list_init();
+    self.unsorted = list_init();
+    self.maxHeap = list_init();
     for (int i = 0; i < length; i++) {
-        list_append(self.toSort, (unitype) randomInt(0, 5 * length), 'i');
+        list_append(self.unsorted, (unitype) randomInt(0, 5 * length), 'i');
     }
     for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
-    self.loaded = 0;
     self.highlight = -1;
     self.highlightCyan = length;
     self.treeHighlight = -1;
@@ -86,20 +86,20 @@ void init(Heapsort *selfp, int length) {
     *selfp = self;
 }
 
-void createunsorted(Heapsort *selfp) { // creates the max heap
+void createMaxHeap(Heapsort *selfp) { // creates the max heap
     Heapsort self = *selfp;
-    // printf("%d %d\n", self.highlight, self.toSort -> length);
-    if (self.treeHighlight > 0 && self.toSort -> data[self.treeHighlight].d > self.toSort -> data[(self.treeHighlight + 1) / 2 - 1].d) {
-        unitype temp = self.toSort -> data[self.treeHighlight];
-        self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) / 2 - 1];
-        self.toSort -> data[(self.treeHighlight + 1) / 2 - 1] = temp;
+    // printf("%d %d\n", self.highlight, self.unsorted -> length);
+    if (self.treeHighlight > 0 && self.maxHeap -> data[self.treeHighlight].d > self.maxHeap -> data[(self.treeHighlight + 1) / 2 - 1].d) {
+        unitype temp = self.maxHeap -> data[self.treeHighlight];
+        self.maxHeap -> data[self.treeHighlight] = self.maxHeap -> data[(self.treeHighlight + 1) / 2 - 1];
+        self.maxHeap -> data[(self.treeHighlight + 1) / 2 - 1] = temp;
         self.treeHighlight = (self.treeHighlight + 1) / 2 - 1;
     } else {
-        if (self.highlight + 1 <= self.toSort -> length) { // potential glitch: -1 is not less than 15 if the 15 is an unsigned int, cuz -1 is interpreted as the max int value, even though its type is a signed int
+        if (self.highlight + 1 <= self.unsorted -> length) { // potential glitch: -1 is not less than 15 if the 15 is an unsigned int, cuz -1 is interpreted as the max int value, even though its type is a signed int
             self.highlight += 1;
             self.treeHighlight = self.highlight;
-            if (self.highlight + 1 <= self.toSort -> length)
-                self.loaded += 1;
+            if (self.highlight + 1 <= self.unsorted -> length)
+                list_append(self.maxHeap, self.unsorted -> data[self.highlight], 'i');
             else
                 self.phase += 1;
         }
@@ -111,43 +111,42 @@ void createunsorted(Heapsort *selfp) { // creates the max heap
 void heapify(Heapsort *selfp) { // Heapify algorithm sorts the list via the max heap
     Heapsort self = *selfp;
     if (self.phase > 2) {
-        if ((self.treeHighlight + 1) * 2 - 1 < self.sorted && (self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d || self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2].d)) {
-            if (self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d > self.toSort -> data[(self.treeHighlight + 1) * 2].d) {
-                unitype temp = self.toSort -> data[self.treeHighlight];
-                self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2 - 1];
-                self.toSort -> data[(self.treeHighlight + 1) * 2 - 1] = temp;
+        if ((self.treeHighlight + 1) * 2 - 1 < self.sorted && (self.maxHeap -> data[self.treeHighlight].d < self.maxHeap -> data[(self.treeHighlight + 1) * 2 - 1].d || self.maxHeap -> data[self.treeHighlight].d < self.maxHeap -> data[(self.treeHighlight + 1) * 2].d)) {
+            if (self.maxHeap -> data[(self.treeHighlight + 1) * 2 - 1].d > self.maxHeap -> data[(self.treeHighlight + 1) * 2].d) {
+                unitype temp = self.maxHeap -> data[self.treeHighlight];
+                self.maxHeap -> data[self.treeHighlight] = self.maxHeap -> data[(self.treeHighlight + 1) * 2 - 1];
+                self.maxHeap -> data[(self.treeHighlight + 1) * 2 - 1] = temp;
                 self.treeHighlight = (self.treeHighlight + 1) * 2 - 1;
             } else {
-                unitype temp = self.toSort -> data[self.treeHighlight];
-                self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2];
-                self.toSort -> data[(self.treeHighlight + 1) * 2] = temp;
+                unitype temp = self.maxHeap -> data[self.treeHighlight];
+                self.maxHeap -> data[self.treeHighlight] = self.maxHeap -> data[(self.treeHighlight + 1) * 2];
+                self.maxHeap -> data[(self.treeHighlight + 1) * 2] = temp;
                 self.treeHighlight = (self.treeHighlight + 1) * 2;
             }
-        } else if ((self.treeHighlight + 1) * 2 - 1 == self.sorted && self.toSort -> data[self.treeHighlight].d < self.toSort -> data[(self.treeHighlight + 1) * 2 - 1].d) { // special case: only left node is available and is larger than parent
-            unitype temp = self.toSort -> data[self.treeHighlight];
-            self.toSort -> data[self.treeHighlight] = self.toSort -> data[(self.treeHighlight + 1) * 2 - 1];
-            self.toSort -> data[(self.treeHighlight + 1) * 2 - 1] = temp;
-            self.treeHighlight = (self.treeHighlight + 1) * 2 - 1;
+            self.highlight = self.treeHighlight;
         } else {
             self.phase = 1;
-            heapify(&self);
         }
     } else if (self.phase > 1) {
-        unitype temp = self.toSort -> data[self.sorted];
-        self.toSort -> data[self.sorted] = self.toSort -> data[0];
-        self.toSort -> data[0] = temp;
+        unitype temp = self.maxHeap -> data[self.sorted];
+        self.maxHeap -> data[self.sorted] = self.maxHeap -> data[0];
+        self.maxHeap -> data[0] = temp;
         self.treeHighlight = 0;
         self.treeHighlightCyan = self.sorted;
         self.highlightCyan = self.sorted;
+        self.highlight = self.treeHighlight;
         self.sorted -= 1;
         self.phase += 1;
     } else {
         self.treeHighlightCyan = 0;
+        //self.highlightCyan = 0;
         self.treeHighlight = self.sorted;
+        self.highlight = self.treeHighlight;
         if (self.sorted == 0) {
             self.highlightCyan = 0;
             self.treeHighlight = -1;
             self.treeHighlightCyan = -1;
+            //printf("finished\n");
         } else {
             self.phase += 1;
         }
@@ -159,11 +158,11 @@ void renderHeap(Heapsort *selfp) {
     Heapsort self = *selfp;
     list_t *xposList = list_init();
     list_append(xposList, (unitype) 0.0, 'd'); // dummy item for 0th
-    int depth = ceil(log(self.loaded + 1) / log(2)); // depth of the tree
+    int depth = ceil(log(self.maxHeap -> length + 1) / log(2)); // depth of the tree
     double currentAngle = self.maximumAngle / pow(self.angleChange, depth - 1);
     int oldLog = 0;
-    double ypos = 90;
-    for (int i = 0; i < self.loaded; i++) { // first loop: render connections
+    double ypos = 115;
+    for (int i = 0; i < self.maxHeap -> length; i++) { // first loop: render connections
         int log2 = floor(log(i + 1) / log(2));
         // double xpos = (pow(2, log2) - 1) * self.nodeSize * -1 + (self.nodeSize * 2 * (i + 1 - pow(2, log2))); // naive approach
         if (log2 > oldLog) {
@@ -191,8 +190,8 @@ void renderHeap(Heapsort *selfp) {
         list_append(xposList, (unitype) xpos, 'd');
     }
     oldLog = 0;
-    ypos = 90;
-    for (int i = 0; i < self.loaded; i++) { // second loop: render nodes
+    ypos = 115;
+    for (int i = 0; i < self.maxHeap -> length; i++) { // second loop: render nodes
         int log2 = floor(log(i + 1) / log(2));
         if (log2 > oldLog) {
             oldLog = log2;
@@ -217,7 +216,7 @@ void renderHeap(Heapsort *selfp) {
         turtlePenUp();
         turtlePenColor(0, 0, 0);
         char num[12];
-        sprintf(num, "%d", self.toSort -> data[i].i);
+        sprintf(num, "%d", self.maxHeap -> data[i].i);
         textGLWriteString(num, (xposList -> data[i + 1].d + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.nodeSize * self.screenSize * 0.4, 50);
     }
     list_free(xposList);
@@ -226,41 +225,76 @@ void renderHeap(Heapsort *selfp) {
 
 void renderArray(Heapsort *selfp) {
     Heapsort self = *selfp;
-    double ypos = 125;
+
+    /* unsorted array */
+    double ypos = 150;
     turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
-    for (int i = 0; i < self.toSort -> length; i++) {
-        double xpos = (i - self.toSort -> length / 2.0) * self.arraySegmentSize;
-        if (self.treeHighlight == i) {
+    for (int i = 0; i < self.unsorted -> length; i++) {
+        double xpos = (i - self.unsorted -> length / 2.0) * self.arraySegmentSize;
+        if (self.highlight == i) {
             turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
             (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
             19, 236, 48, 0);
         }
-        if (self.highlightCyan <= i) {
-            turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
-            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
-            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
-            (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
-            43, 188, 255, 0);
-        }
         turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
         turtlePenUp();
         char num[12];
-        sprintf(num, "%d", self.toSort -> data[i].i);
+        sprintf(num, "%d", self.unsorted -> data[i].i);
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
         sprintf(num, "%d", i + 1);
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + 17 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
     }
-    turtleGoto(((self.toSort -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
     turtlePenDown();
-    turtleGoto(((self.toSort -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
-    turtleGoto(((self.toSort -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
-    turtleGoto(((self.toSort -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
+    turtleGoto(((self.unsorted -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
     turtlePenUp();
+
+    /* max heap */
+    if (self.phase > 0) {
+        ypos = 150 - 20 - self.nodeSize * 2 * ceil(log(self.maxHeap -> length + 1) / log(2)); // depth of the tree
+        turtlePenColor(0, 0, 0);
+        turtlePenSize(2 * self.screenSize);
+        for (int i = 0; i < self.unsorted -> length; i++) {
+            double xpos = (i - self.unsorted -> length / 2.0) * self.arraySegmentSize;
+            if (self.highlight == i) {
+                turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+                (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+                (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+                (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+                19, 236, 48, 0);
+            }
+            if (self.highlightCyan <= i) {
+                turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+                (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+                (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+                (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+                43, 188, 255, 0);
+            }
+            turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
+            turtlePenDown();
+            turtleGoto((xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
+            turtlePenUp();
+            char num[12];
+            sprintf(num, "%d", self.maxHeap -> data[i].i);
+            textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
+            sprintf(num, "%d", i + 1);
+            textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + 17 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
+        }
+        turtleGoto(((self.unsorted -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
+        turtlePenDown();
+        turtleGoto(((self.unsorted -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
+        turtleGoto(((self.unsorted -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
+        turtleGoto(((self.unsorted -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
+        turtlePenUp();
+    }
+
     *selfp = self;
 }
 
@@ -311,7 +345,7 @@ void hotkeyTick(Heapsort *selfp) {
             if (self.phase) {
                 heapify(&self);
             } else {
-                createunsorted(&self);
+                createMaxHeap(&self);
             }
         } else {
             self.keys[2] += 1;
