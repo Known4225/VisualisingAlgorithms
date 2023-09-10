@@ -75,7 +75,7 @@ void init(Quicksort *selfp, int length) {
     self.pivot = -1;
     self.loaded = 0;
     self.highlight = -1;
-    self.highlightCyan = length;
+    self.highlightCyan = -1;
     self.pivotSplitter = -1;
     self.phase = 0;
     self.arraySegmentSize = 20;
@@ -148,21 +148,18 @@ void swap(Quicksort *selfp, int index1, int index2) {
 
 void quicksortStep(Quicksort *selfp) { // iterative quicksort
     Quicksort self = *selfp;
-    self.operations += 1;
-    if (self.phase == 4) {
-        /* finished */
-    } else if (self.phase == 3) {
-        self.phase = 4;
+    if (self.phase == 3) {
+        self.phase = -1;
         for (int i = 0; i < self.toSort -> length; i++) {
             self.barValueSet -> data[i].d = 0.9;
         }
         self.pivot = -1;
+        self.highlightCyan = self.toSort -> length;
         self.highlight = -1;
         self.pivotSplitter = -1;
         printf("Operations: %d\n", self.operations);
     } else if (self.phase == 2) {
         if (self.effectiveEnd - self.effectiveFront == 0) {
-            printf("made it\n");
             
             int find = 0;
             while (self.barRecord -> data[find].i != self.effectiveFront) {
@@ -171,15 +168,14 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
             self.barValueSet -> data[find].d = 0.4;
             
             if (self.feStack -> length < 1 || self.feStack -> data[self.feStack -> length - 1].i < self.feStack -> data[self.feStack -> length - 2].i) {
-                printf("finished\n");
                 self.phase = 3;
             } else {
-                list_print(self.feStack);
+                // list_print(self.feStack);
                 self.effectiveEnd = self.feStack -> data[self.feStack -> length - 1].i;
                 list_pop(self.feStack);
                 self.effectiveFront = self.feStack -> data[self.feStack -> length - 1].i;
                 list_pop(self.feStack);
-                printf("front: %d end: %d\n", self.effectiveFront, self.effectiveEnd);
+                self.highlightCyan = self.effectiveFront;
 
                 for (int i = self.effectiveFront; i < self.effectiveEnd + 1; i++) {
                     find = 0;
@@ -201,13 +197,12 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
                 self.barValueSet -> data[find].d = 0.4;
             }
 
-            if (self.pivotSplitter + 1 < self.toSort -> length) {
+            if (self.pivotSplitter + 1 < self.toSort -> length && (self.effectiveEnd - (self.pivotSplitter + 1) > 1 || (self.effectiveEnd == self.toSort -> length - 1 && self.effectiveEnd - (self.pivotSplitter + 1) > 0))) {
                 list_append(self.feStack, (unitype) (self.pivotSplitter + 1), 'i');
                 list_append(self.feStack, (unitype) self.effectiveEnd, 'i');
             }
             self.effectiveEnd = self.pivotSplitter;
             
-            printf("front: %d end: %d\n", self.effectiveFront, self.effectiveEnd);
             self.pivotSplitter = -1;
             self.pivot = -1;
             if (self.effectiveEnd - self.effectiveFront > 0)
@@ -222,14 +217,12 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
             if (self.pivot == self.effectiveFront) {
                 self.pivotSplitter = self.pivot + 1;
                 self.highlight = self.pivot + 1;
-                printf("front: %d end: %d\n", self.effectiveFront, self.effectiveEnd);
             }
         } else if (self.pivot > self.effectiveFront) {
             swap(&self, self.effectiveFront, self.pivot);
             self.pivot = self.effectiveFront;
             self.pivotSplitter = self.pivot + 1;
             self.highlight = self.pivot + 1;
-            printf("front: %d end: %d\n", self.effectiveFront, self.effectiveEnd);
         } else {
             if (self.toSort -> data[self.highlight].i < self.toSort -> data[self.pivot].i) {
                 swap(&self, self.pivotSplitter, self.highlight);
@@ -252,13 +245,20 @@ void renderArray(Quicksort *selfp) {
     double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize;
     turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
-    for (int i = 0; i < self.toSort -> length; i++) {
+    for (int i = 0; i < self.toSort -> length; i++) { 
         if (self.pivotSplitter == i) {
             turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
             (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
-            43, 188, 255, 0);
+            116, 255, 133, 0);
+        }
+        if (i < self.highlightCyan) {
+            turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+            (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
+            190, 190, 190, 0);
         }
         if (self.highlight == i) {
             turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
@@ -272,7 +272,7 @@ void renderArray(Quicksort *selfp) {
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
             (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
-            109, 209, 255, 0);
+            43, 188, 255, 0);
         }
         turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
         turtlePenDown();
@@ -394,7 +394,11 @@ void hotkeyTick(Quicksort *selfp) {
         if (self.keys[1] == 0) {
             self.operations += 1;
             self.keys[1] = 1;
-            quicksortStep(&self);
+            if (self.toSort -> length > 1) {
+                quicksortStep(&self);
+            } else {
+                printf("already sorted\n");
+            }
         } else {
             self.keys[2] += 1;
             if (self.keys[2] > 30) {
