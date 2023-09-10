@@ -258,7 +258,7 @@ void renderArray(Quicksort *selfp) {
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
             (xpos + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize,
-            190, 190, 190, 0);
+            230, 230, 230, 0);
         }
         if (self.highlight == i) {
             turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
