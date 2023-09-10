@@ -211,7 +211,7 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
     } else if (self.phase == 1) {
         swap(&self, self.pivotSplitter, self.pivot);
         self.phase = 2;
-    } else {
+    } else if (self.phase == 0) {
         if (self.pivot == -1) {
             self.pivot = self.effectiveFront + (self.effectiveEnd - self.effectiveFront) / 2; // middle pivot
             if (self.pivot == self.effectiveFront) {
