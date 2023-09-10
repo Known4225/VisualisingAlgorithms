@@ -33,6 +33,7 @@ typedef struct {
     double nodeSize;
     double maximumAngle;
     double angleChange;
+    double barScale;
 } Heapsort;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -83,6 +84,8 @@ void init(Heapsort *selfp, int length) {
     self.focalCSX = 0;
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
+
+    self.barScale = 5;
     *selfp = self;
 }
 
@@ -227,10 +230,10 @@ void renderHeap(Heapsort *selfp) {
 void renderArray(Heapsort *selfp) {
     Heapsort self = *selfp;
     double ypos = 125;
+    double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize;
     turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
     for (int i = 0; i < self.toSort -> length; i++) {
-        double xpos = (i - self.toSort -> length / 2.0) * self.arraySegmentSize;
         if (self.treeHighlight == i) {
             turtleQuad((xpos + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
             (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize,
@@ -254,6 +257,7 @@ void renderArray(Heapsort *selfp) {
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
         sprintf(num, "%d", i + 1);
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (ypos + 17 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
+        xpos += self.arraySegmentSize;
     }
     turtleGoto(((self.toSort -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos + 10 + self.screenY) * self.screenSize);
     turtlePenDown();
@@ -261,6 +265,22 @@ void renderArray(Heapsort *selfp) {
     turtleGoto(((self.toSort -> length / 2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
     turtleGoto(((self.toSort -> length / -2.0) * self.arraySegmentSize + self.screenX) * self.screenSize, (ypos - 10 + self.screenY) * self.screenSize);
     turtlePenUp();
+    *selfp = self;
+}
+
+void renderBar(Heapsort *selfp) {
+    Heapsort self = *selfp;
+    double xpos = (self.toSort -> length / -2.0) * self.arraySegmentSize + self.arraySegmentSize * 0.5;
+    double ypos = 170;
+    turtlePenSize(10 * self.screenSize);
+    for (int i = 0; i < self.toSort -> length; i++) {
+        turtlePenColor(0, 0, 0);
+        turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.screenY) * self.screenSize);
+        turtlePenDown();
+        turtleGoto((xpos + self.screenX) * self.screenSize, (ypos + self.toSort -> data[i].i * self.barScale + self.screenY) * self.screenSize);
+        turtlePenUp();
+        xpos += self.arraySegmentSize;
+    }
     *selfp = self;
 }
 
@@ -304,7 +324,7 @@ void scrollTick(Heapsort *selfp) {
 
 void hotkeyTick(Heapsort *selfp) {
     Heapsort self = *selfp;
-    if (turtleKeyPressed(GLFW_KEY_SPACE)) { // space
+    if (turtleKeyPressed(GLFW_KEY_SPACE)) { // space to advance animation
         if (self.keys[1] == 0) {
             self.keys[1] = 1;
             
@@ -323,6 +343,21 @@ void hotkeyTick(Heapsort *selfp) {
     } else {
         self.keys[1] = 0;
         self.keys[2] = 0;
+    }
+    if (turtleKeyPressed(GLFW_KEY_R)) { // R to reset
+        if (self.keys[3] == 0) {
+            self.keys[3] = 1;
+            int len = self.toSort -> length;
+            list_free(self.toSort);
+            init(selfp, len);
+            selfp -> screenX = self.screenX;
+            selfp -> screenY = self.screenY;
+            selfp -> screenSize = self.screenSize;
+            selfp -> keys[3] = 1;
+            return;
+        }
+    } else {
+        self.keys[3] = 0;
     }
     *selfp = self;
 }
@@ -370,6 +405,7 @@ int main(int argc, char *argv[]) {
         hotkeyTick(&obj);
         renderArray(&obj);
         renderHeap(&obj);
+        renderBar(&obj);
         turtleUpdate(); // update the screen
         end = clock();
         // printf("ms: %d\n", end - start);
