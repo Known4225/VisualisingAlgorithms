@@ -16,9 +16,10 @@ typedef struct {
     int operations;
     list_t *toSort;
     list_t *sorted;
-    list_t *feStack;
-    int pivot;
-    int loaded;
+    list_t *middleCoords;
+    list_t *bottomCoords;
+    int showDepth;
+    double minY;
     int highlight;
     int highlightCyan;
     int pivotSplitter;
@@ -67,6 +68,7 @@ void init(Mergesort *selfp, int length) {
     Mergesort self = *selfp;
     self.toSort = list_init();
     self.sorted = list_init();
+    self.bottomCoords = list_init();
     for (int i = 0; i < length; i++) {
         list_append(self.toSort, (unitype) randomInt(0, 5 * length), 'i');
         list_append(self.sorted, self.toSort -> data[i], 'i');
@@ -74,8 +76,8 @@ void init(Mergesort *selfp, int length) {
     for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
-    self.pivot = -1;
-    self.loaded = 0;
+    self.showDepth = length;
+    self.minY = 0;
     self.highlight = -1;
     self.highlightCyan = -1;
     self.pivotSplitter = -1;
@@ -151,90 +153,19 @@ void swap(Mergesort *selfp, int index1, int index2) {
 void mergesortStep(Mergesort *selfp) { // iterative Mergesort
     Mergesort self = *selfp;
     if (self.phase == 3) {
-        self.phase = -1;
-        for (int i = 0; i < self.toSort -> length; i++) {
-            self.barValueSet -> data[i].d = 0.9;
-        }
-        self.pivot = -1;
-        self.highlightCyan = self.toSort -> length;
-        self.highlight = -1;
-        self.pivotSplitter = -1;
-        printf("Operations: %d\n", self.operations);
+
     } else if (self.phase == 2) {
-        if (self.effectiveEnd - self.effectiveFront == 0) {
-            
-            int find = 0;
-            while (self.barRecord -> data[find].i != self.effectiveFront) {
-                find++;
-            }
-            self.barValueSet -> data[find].d = 0.4;
-            
-            if (self.feStack -> length < 1 || self.feStack -> data[self.feStack -> length - 1].i < self.feStack -> data[self.feStack -> length - 2].i) {
-                self.phase = 3;
-            } else {
-                // list_print(self.feStack);
-                self.effectiveEnd = self.feStack -> data[self.feStack -> length - 1].i;
-                list_pop(self.feStack);
-                self.effectiveFront = self.feStack -> data[self.feStack -> length - 1].i;
-                list_pop(self.feStack);
-                self.highlightCyan = self.effectiveFront;
-
-                for (int i = self.effectiveFront; i < self.effectiveEnd + 1; i++) {
-                    find = 0;
-                    while (self.barRecord -> data[find].i != i) {
-                        find++;
-                    }
-                    self.barValueSet -> data[find].d = 0.9;
-                }
-                self.pivotSplitter = -1;
-                self.pivot = -1;
-                self.phase = 0;
-            }
-        } else {
-            for (int i = self.pivotSplitter + 1; i < self.effectiveEnd + 1; i++) {
-                int find = 0;
-                while (self.barRecord -> data[find].i != i) {
-                    find++;
-                }
-                self.barValueSet -> data[find].d = 0.4;
-            }
-
-            if (self.pivotSplitter + 1 < self.toSort -> length && (self.effectiveEnd - (self.pivotSplitter + 1) > 1 || (self.effectiveEnd == self.toSort -> length - 1 && self.effectiveEnd - (self.pivotSplitter + 1) > 0))) {
-                list_append(self.feStack, (unitype) (self.pivotSplitter + 1), 'i');
-                list_append(self.feStack, (unitype) self.effectiveEnd, 'i');
-            }
-            self.effectiveEnd = self.pivotSplitter;
-            
-            self.pivotSplitter = -1;
-            self.pivot = -1;
-            if (self.effectiveEnd - self.effectiveFront > 0)
-                self.phase = 0;
-        }
+      
     } else if (self.phase == 1) {
-        swap(&self, self.pivotSplitter, self.pivot);
-        self.phase = 2;
-    } else {
-        if (self.pivot == -1) {
-            self.pivot = self.effectiveFront + (self.effectiveEnd - self.effectiveFront) / 2; // middle pivot
-            if (self.pivot == self.effectiveFront) {
-                self.pivotSplitter = self.pivot + 1;
-                self.highlight = self.pivot + 1;
-            }
-        } else if (self.pivot > self.effectiveFront) {
-            swap(&self, self.effectiveFront, self.pivot);
-            self.pivot = self.effectiveFront;
-            self.pivotSplitter = self.pivot + 1;
-            self.highlight = self.pivot + 1;
-        } else {
-            if (self.toSort -> data[self.highlight].i < self.toSort -> data[self.pivot].i) {
-                swap(&self, self.pivotSplitter, self.highlight);
-                self.pivotSplitter += 1;
-            }
-            self.highlight += 1;
-            if (self.highlight > self.effectiveEnd) {
-                self.highlight = -1;
-                self.pivotSplitter -= 1;
-                self.phase += 1;
+        
+    } else if (self.phase == 0) {
+        self.showDepth /= 2;
+        if (self.showDepth == 1) {
+            self.phase = 1;
+            for (int i = 1; i < self.bottomCoords -> length; i += 2) {
+                if (self.bottomCoords -> data[i].d < self.minY) {
+                    self.minY = self.bottomCoords -> data[i].d;
+                }
             }
         }
     }
@@ -258,8 +189,6 @@ void drawArrow(Mergesort *selfp, double x1, double y1, double x2, double y2) {
     turtlePenDown();
     turtleGoto((x2 + 5 * sin((angle + 45) / 57.2958) + self.screenX) * self.screenSize, (y2 + 5 * cos((angle + 45) / 57.2958) + self.screenY) * self.screenSize);
     turtlePenUp();
-
-    // *selfp = self; // unneeded
 }
 
 void renderArrayOne(Mergesort *selfp, double x, double y, int start, int end) {
@@ -285,39 +214,33 @@ void renderArrayOne(Mergesort *selfp, double x, double y, int start, int end) {
     turtleGoto((((end - start + 1) / 2.0) * self.arraySegmentSize + self.screenX + x) * self.screenSize, (y - 10 + self.screenY) * self.screenSize);
     turtleGoto((((end - start + 1) / -2.0) * self.arraySegmentSize + self.screenX + x) * self.screenSize, (y - 10 + self.screenY) * self.screenSize);
     turtlePenUp();
-    *selfp = self;
 }
 
-void renderMergeArray(Mergesort *selfp) {
+void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end) { // recursive graphics
     Mergesort self = *selfp;
-    double xpos = 0;
-    double ypos = 150;
-    int start = 0;
-    int end = self.toSort -> length - 1;
-    int log2 = 1;
-    double antilog = self.toSort -> length;
-    while (end - start > 0) {
-        for (int i = 0; i < log2; i++) {
-            double x = xpos + i * ((end - start + 1) / 2.0 + 0.1 * (end - start + 1)) * self.arraySegmentSize * 2;
-            int renderEnd = end + i * ceil(antilog);
-            if (renderEnd > self.toSort -> length - 1)
-                renderEnd = self.toSort -> length - 1;
-            renderArrayOne(&self, x, ypos, start + i * ceil(antilog), renderEnd);
-            drawArrow(&self, x - ((end - start + 1) / 4.0) * self.arraySegmentSize, ypos - 20, x - ((end - start + 1) / 4.0 + 0.05 * (end - start + 1)) * self.arraySegmentSize, ypos - 40);
-            drawArrow(&self, x + ((end - start + 1) / 4.0) * self.arraySegmentSize, ypos - 20, x + ((end - start + 1) / 4.0 + 0.05 * (end - start + 1)) * self.arraySegmentSize, ypos - 40);
-        }
-        log2 *= 2;
-        antilog /= 2;
-        end /= 2;
-        ypos -= 70;
-        xpos += 0 - ((end - start + 1) / 2.0 + 0.1 * (end - start + 1)) * self.arraySegmentSize;
+    if (end - start > self.showDepth - 1) {
+        list_append(self.middleCoords, (unitype) x, 'd');
+        list_append(self.middleCoords, (unitype) y, 'd');
+        renderArrayOne(&self, x, y, start, end);
+        double length = pow(2, ceil(log(end - start + 1) / log(2)));
+        int length1 = ((end - start + 1) / 2);
+        int length2 = end - start - length1 + 1;
+        int newLength = pow(2, ceil(log(length2) / log(2)));
+        drawArrow(selfp, x - (length / 4.0) * self.arraySegmentSize, y - 20, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
+        drawArrow(selfp, x + (length / 4.0) * self.arraySegmentSize, y - 20, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
+        renderMergeArray(selfp, x - (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start, start + length1 - 1);
+        renderMergeArray(selfp, x + (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start + length1, end);
+    } else {
+        renderArrayOne(selfp, x, y, start, end);
+        list_append(self.bottomCoords, (unitype) x, 'd');
+        list_append(self.bottomCoords, (unitype) y, 'd');
     }
-    for (int i = 0; i < log2; i++) {
-        double x = xpos + i * ((end - start + 1) / 2.0 + 0.1 * (end - start + 1)) * self.arraySegmentSize * 2;
-        int renderEnd = end + i * ceil(antilog);
-        if (renderEnd > self.toSort -> length - 1)
-            renderEnd = self.toSort -> length - 1;
-        renderArrayOne(&self, x, ypos, start + i, renderEnd);
+}
+
+void renderMerging(Mergesort *selfp) {
+    Mergesort self = *selfp;
+    for (int i = 0; i < self.bottomCoords -> length; i++) {
+
     }
     *selfp = self;
 }
@@ -490,14 +413,18 @@ int main(int argc, char *argv[]) {
         sscanf(argv[1], "%d\n", &listLength);
         init(&obj, listLength);
     }
-    
+    int depth = (int) ceil(log(obj.toSort -> length) / log(2));
     while (turtle.close == 0) { // main loop
         start = clock();
         turtleClear();
         mouseTick(&obj);
         scrollTick(&obj);
         hotkeyTick(&obj);
-        renderMergeArray(&obj);
+        list_clear(obj.bottomCoords);
+        renderMergeArray(&obj, 0, 150, 0, obj.toSort -> length - 1);
+        if (obj.phase > 0) {
+            renderMerging(&obj);
+        }
         renderBar(&obj);
         turtleUpdate(); // update the screen
         end = clock();

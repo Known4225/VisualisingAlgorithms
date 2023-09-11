@@ -415,6 +415,13 @@ void hotkeyTick(Quicksort *selfp) {
             self.keys[3] = 1;
             int len = self.toSort -> length;
             list_free(self.toSort);
+            list_free(self.feStack);
+            list_free(self.barPosition);
+            list_free(self.barGoto);
+            list_free(self.barLength);
+            list_free(self.barRecord);
+            list_free(self.barValue);
+            list_free(self.barValueSet);
             init(selfp, len);
             selfp -> screenX = self.screenX;
             selfp -> screenY = self.screenY;

@@ -430,6 +430,10 @@ void hotkeyTick(Heapsort *selfp) {
             self.keys[3] = 1;
             int len = self.toSort -> length;
             list_free(self.toSort);
+            list_free(self.barPosition);
+            list_free(self.barGoto);
+            list_free(self.barLength);
+            list_free(self.barRecord);
             init(selfp, len);
             selfp -> screenX = self.screenX;
             selfp -> screenY = self.screenY;
