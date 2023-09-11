@@ -41,6 +41,7 @@ typedef struct {
     int effectiveFront;
     int effectiveEnd;
     int mergeState;
+    int mergeStateEnd;
     double barScale;
     list_t *barPosition;
     list_t *barGoto;
@@ -149,6 +150,7 @@ void init(Mergesort *selfp, int length) {
     self.depth = (int) ceil(log(length) / log(2));
     self.showDepth = self.depth + 1;
     self.mergeState = pow(2, self.depth) * 5 - 10;
+    self.mergeStateEnd = 0;
     self.sorted = list_init();
     for (int i = 0; i < self.depth + 1; i++) {
         list_append(self.sorted, (unitype) list_init(), 'r');
@@ -241,13 +243,24 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
     if (self.phase == 3) {
 
     } else if (self.phase == 2) {
-      
+        /* finished */
+        printf("operations: %d\n", self.operations);
+        self.phase = 3;
     } else if (self.phase == 1) {
         if (self.mergeState > -1) {
-            self.mergeState -= 5;
-        }
-        
-        
+            if (self.mergeStateEnd == 0) {
+                self.mergeState -= 5;
+                self.mergeStateEnd = self.middleCoords -> data[self.mergeState + 5 + 3].i - self.middleCoords -> data[self.mergeState + 5 + 2].i;
+            } else {
+                self.mergeStateEnd -= 1;
+            }
+        } else {
+            if (self.mergeStateEnd > 0) {
+                self.mergeStateEnd -= 1;
+            } else {
+                self.phase = 2;
+            }
+        }  
     } else if (self.phase == 0) {
         self.showDepth -= 1;
         if (self.showDepth == 1) {
@@ -342,6 +355,9 @@ void renderMerging(Mergesort *selfp) {
         int start = self.middleCoords -> data[i + 2].i;
         int end = self.middleCoords -> data[i + 3].i;
         double length = pow(2, ceil(log(end - start + 1) / log(2)));
+        if (i == self.mergeState + 5) {
+            end -= self.mergeStateEnd;
+        }
         renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i));
         if (end - start > 0) {
             drawArrow(selfp, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x - (length / 4.0) * self.arraySegmentSize, y + 30);
