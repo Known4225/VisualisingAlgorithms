@@ -26,7 +26,6 @@ typedef struct {
     double minY;
     int highlight;
     int highlightCyan;
-    int pivotSplitter;
     double mouseX;
     double mouseY;
     double focalX;
@@ -168,7 +167,6 @@ void init(Mergesort *selfp, int length) {
     self.minY = 0;
     self.highlight = -1;
     self.highlightCyan = -1;
-    self.pivotSplitter = -1;
     self.phase = 0;
     self.arraySegmentSize = 20;
     self.effectiveFront = 0;
@@ -288,11 +286,25 @@ void drawArrow(Mergesort *selfp, double x1, double y1, double x2, double y2) {
     turtlePenUp();
 }
 
-void renderArray(Mergesort *selfp, double x, double y, int start, int end, char array) {
+void renderArray(Mergesort *selfp, double x, double y, int start, int end, char array, int specialGreen, int specialCyan) {
     Mergesort self = *selfp;
     turtlePenSize(2 * self.screenSize);
     double xpos = x + ((end - start + 1) / -2.0) * self.arraySegmentSize;
-    for (int i = start; i < end + 1; i++) { 
+    for (int i = start; i < end + 1; i++) {
+        if (specialGreen == i) {
+            turtleQuad((xpos + self.screenX) * self.screenSize, (y + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (y + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize,
+            (xpos + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize,
+            19, 236, 48, 0);
+        }
+        if (specialCyan == i) {
+            turtleQuad((xpos + self.screenX) * self.screenSize, (y + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (y + 10 + self.screenY) * self.screenSize,
+            (xpos + self.arraySegmentSize + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize,
+            (xpos + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize,
+            43, 188, 255, 0);
+        }
         turtleGoto((xpos + self.screenX) * self.screenSize, (y + 10 + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((xpos + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize);
@@ -302,7 +314,6 @@ void renderArray(Mergesort *selfp, double x, double y, int start, int end, char 
             sprintf(num, "%d", self.toSort -> data[i].i);
         else
             sprintf(num, "%d", self.sorted -> data[array - 2].r -> data[i].i);
-        
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (y + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
         sprintf(num, "%d", i);
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (y + 17 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
@@ -325,7 +336,7 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, 
         list_append(self.middleCoords, (unitype) start, 'i');
         list_append(self.middleCoords, (unitype) end, 'i');
         list_append(self.middleCoords, (unitype) depth, 'i');
-        renderArray(selfp, x, y, start, end, 1);
+        renderArray(selfp, x, y, start, end, 1, -1, -1);
         double length = pow(2, ceil(log(end - start + 1) / log(2)));
         int length1 = ((end - start + 1) / 2);
         int length2 = end - start - length1 + 1;
@@ -340,7 +351,7 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, 
             renderMergeArray(selfp, x, y - 70, start, end, depth - 1);
         }
     } else {
-        renderArray(selfp, x, y, start, end, 1);
+        renderArray(selfp, x, y, start, end, 1, -1, -1);
         list_append(self.bottomCoords, (unitype) x, 'd');
         list_append(self.bottomCoords, (unitype) y, 'd');
     }
@@ -348,7 +359,7 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, 
 
 void renderMerging(Mergesort *selfp) {
     Mergesort self = *selfp;
-    turtlePenColor(220, 220, 220);
+    turtlePenColor(120, 120, 120);
     for (int i = self.middleCoords -> length - 5; i > self.mergeState; i -= 5) {
         double x = self.middleCoords -> data[i].d;
         double y = self.minY - (self.middleCoords -> data[i + 1].d - self.minY);
@@ -357,8 +368,17 @@ void renderMerging(Mergesort *selfp) {
         double length = pow(2, ceil(log(end - start + 1) / log(2)));
         if (i == self.mergeState + 5) {
             end -= self.mergeStateEnd;
+            if (self.phase > 1) {
+                renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
+            } else {
+                if (0) {
+                    renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), end, -1);
+                } else {
+                    renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, end);
+                }
+            }
         }
-        renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i));
+        renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
         if (end - start > 0) {
             drawArrow(selfp, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x - (length / 4.0) * self.arraySegmentSize, y + 30);
             drawArrow(selfp, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x + (length / 4.0) * self.arraySegmentSize, y + 30);
