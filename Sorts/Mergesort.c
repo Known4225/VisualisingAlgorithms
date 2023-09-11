@@ -242,8 +242,6 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
 
     } else if (self.phase == 2) {
         /* finished */
-        printf("operations: %d\n", self.operations);
-        self.phase = 3;
     } else if (self.phase == 1) {
         if (self.mergeState > -1) {
             if (self.mergeStateEnd == 0) {
@@ -256,6 +254,7 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
             if (self.mergeStateEnd > 0) {
                 self.mergeStateEnd -= 1;
             } else {
+                printf("operations: %d\n", self.operations);
                 self.phase = 2;
             }
         }  
