@@ -8,7 +8,7 @@ This one is not as cool as quicksort and heapsort, mainly because it's kind of h
 because of how memory is copied and indexes don't really "swap around" like they do in other sorts.
 
 I do want to eventually put a little thing on the side that lets you step through the merge algorithm, but that will have to wait for another day
-but this project is a nighmare to work on
+this project is a nighmare to work on
 I don't like recursion, and should not have used it
 
 */
@@ -378,7 +378,13 @@ void renderMerging(Mergesort *selfp) {
                 }
             }
         }
-        renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
+        if (i == self.mergeState + 10) {
+            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, start);
+        } else if (i == self.mergeState + 15) {
+            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), start, -1);
+        } else {
+            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
+        }
         if (end - start > 0) {
             drawArrow(selfp, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x - (length / 4.0) * self.arraySegmentSize, y + 30);
             drawArrow(selfp, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x + (length / 4.0) * self.arraySegmentSize, y + 30);
