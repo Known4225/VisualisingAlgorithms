@@ -159,7 +159,7 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
         self.pivotSplitter = -1;
         printf("Operations: %d\n", self.operations);
     } else if (self.phase == 2) {
-        if (self.effectiveEnd - self.effectiveFront == 0) {
+        if (self.effectiveEnd - self.effectiveFront <= 0) {
             
             int find = 0;
             while (self.barRecord -> data[find].i != self.effectiveFront) {
@@ -189,7 +189,7 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
                 self.phase = 0;
             }
         } else {
-            for (int i = self.pivotSplitter + 1; i < self.effectiveEnd + 1; i++) {
+            for (int i = self.pivotSplitter; i < self.effectiveEnd + 1; i++) {
                 int find = 0;
                 while (self.barRecord -> data[find].i != i) {
                     find++;
@@ -197,11 +197,11 @@ void quicksortStep(Quicksort *selfp) { // iterative quicksort
                 self.barValueSet -> data[find].d = 0.4;
             }
 
-            if (self.pivotSplitter + 1 < self.toSort -> length && (self.effectiveEnd - (self.pivotSplitter + 1) > 1 || (self.effectiveEnd == self.toSort -> length - 1 && self.effectiveEnd - (self.pivotSplitter + 1) > 0))) {
+            if (self.pivotSplitter + 1 < self.toSort -> length && (self.effectiveEnd - (self.pivotSplitter + 1) > 0)) {
                 list_append(self.feStack, (unitype) (self.pivotSplitter + 1), 'i');
                 list_append(self.feStack, (unitype) self.effectiveEnd, 'i');
             }
-            self.effectiveEnd = self.pivotSplitter;
+            self.effectiveEnd = self.pivotSplitter - 1;
             
             self.pivotSplitter = -1;
             self.pivot = -1;
