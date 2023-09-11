@@ -4,10 +4,13 @@
 /* general design plan:
 Mergesort visualisation
 
-The bars color and animation are inspired by MathMathMath's scratch project:
-https://scratch.mit.edu/projects/149793697/
-Which is itself inspired by the original sound of sorting
-https://www.youtube.com/watch?v=kPRA0W1kECg
+This one is not as cool as quicksort and heapsort, mainly because it's kind of hard to make the bars animation work with something like this
+because of how memory is copied and indexes don't really "swap around" like they do in other sorts.
+
+I do want to eventually put a little thing on the side that lets you step through the merge algorithm, but that will have to wait for another day
+but this project is a nighmare to work on
+I don't like recursion, and should not have used it
+
 */
 
 typedef struct {
@@ -18,6 +21,7 @@ typedef struct {
     list_t *sorted;
     list_t *middleCoords;
     list_t *bottomCoords;
+    int depth;
     int showDepth;
     double minY;
     int highlight;
@@ -36,7 +40,7 @@ typedef struct {
     double arraySegmentSize;
     int effectiveFront;
     int effectiveEnd;
-    double angleChange;
+    int mergeState;
     double barScale;
     list_t *barPosition;
     list_t *barGoto;
@@ -64,19 +68,101 @@ extern inline double dmod(double a, double modulus) { // always positive mod
     return out;
 }
 
+int *intMergesortEmb(Mergesort *selfp, int *list, int length, int depth, int start) {
+    if (length == 1) { // if the length of the list is 1, it is sorted by default
+        return list;
+    }
+    int halfLen = length / 2;
+    int *list1;
+    int *list2;
+    list1 = intMergesortEmb(selfp, list, halfLen, depth + 1, start); // assume the left half is sorted after this call
+    list2 = intMergesortEmb(selfp, list + halfLen, length - halfLen, depth + 1, start + halfLen); // assume right half is sorted after this call
+    int j = start;
+    for (int i = 0; i < halfLen; i++) {
+        selfp -> sorted -> data[depth].r -> data[j].i = list1[i];
+        j++;
+    }
+    for (int i = 0; i < halfLen; i++) {
+        selfp -> sorted -> data[depth].r -> data[j].i = list2[i];
+        j++;
+    }
+    
+
+    /* Merge */
+
+    int *listEnd = malloc(sizeof(int) * length);
+    int list1p = 0;
+    int list2p = 0;
+    for (int i = 0; i < length; i++) {
+        if (list1p >= halfLen) {
+            listEnd[i] = list2[list2p];
+            list2p++;
+        } else if (list2p >= length - halfLen) {
+            listEnd[i] = list1[list1p];
+            list1p++;
+        } else {
+            if (list1[list1p] > list2[list2p]) {
+                listEnd[i] = list2[list2p];
+                list2p++;
+            } else {
+                listEnd[i] = list1[list1p];
+                list1p++;
+            }
+        }
+    }
+    /* i don't know why this works */
+    if (length > 3) {
+        free(list1);
+    }
+    if (length > 2) {
+        free(list2);
+    }
+    return listEnd;
+}
+
+void intMergesort(Mergesort *selfp, list_t *list) {
+    if (list -> length > 1) {
+        int *oldList = malloc(sizeof(int) * list -> length);
+        for (int i = 0; i < list -> length; i++) {
+            oldList[i] = list -> data[i].i;
+        }
+        int *newList = intMergesortEmb(selfp, oldList, list -> length, 1, 0);
+        free(oldList);
+        for (int i = 0; i < list -> length; i++) {
+            list -> data[i].i = newList[i];
+        }
+        free(newList);
+    }
+}
+
 void init(Mergesort *selfp, int length) {
     Mergesort self = *selfp;
     self.toSort = list_init();
-    self.sorted = list_init();
     self.bottomCoords = list_init();
+    self.middleCoords = list_init();
     for (int i = 0; i < length; i++) {
         list_append(self.toSort, (unitype) randomInt(0, 5 * length), 'i');
-        list_append(self.sorted, self.toSort -> data[i], 'i');
     }
     for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
-    self.showDepth = length;
+    self.depth = (int) ceil(log(length) / log(2));
+    self.showDepth = self.depth + 1;
+    self.mergeState = pow(2, self.depth) * 5 - 10;
+    self.sorted = list_init();
+    for (int i = 0; i < self.depth + 1; i++) {
+        list_append(self.sorted, (unitype) list_init(), 'r');
+        for (int j = 0; j < length; j++) {
+            list_append(self.sorted -> data[i].r, self.toSort -> data[j], 'i');
+        }
+    }
+    list_t *dummy = list_init();
+    list_copy(self.toSort, dummy);
+    intMergesort(&self, self.sorted -> data[0].r);
+    free(dummy);
+
+
+
     self.minY = 0;
     self.highlight = -1;
     self.highlightCyan = -1;
@@ -85,7 +171,7 @@ void init(Mergesort *selfp, int length) {
     self.arraySegmentSize = 20;
     self.effectiveFront = 0;
     self.effectiveEnd = length - 1;
-    self.angleChange = 2;
+    
 
     self.operations = 0;
     self.mouseX = 0;
@@ -157,16 +243,15 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
     } else if (self.phase == 2) {
       
     } else if (self.phase == 1) {
+        if (self.mergeState > -1) {
+            self.mergeState -= 5;
+        }
+        
         
     } else if (self.phase == 0) {
-        self.showDepth /= 2;
+        self.showDepth -= 1;
         if (self.showDepth == 1) {
             self.phase = 1;
-            for (int i = 1; i < self.bottomCoords -> length; i += 2) {
-                if (self.bottomCoords -> data[i].d < self.minY) {
-                    self.minY = self.bottomCoords -> data[i].d;
-                }
-            }
         }
     }
     *selfp = self;
@@ -175,7 +260,6 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
 void drawArrow(Mergesort *selfp, double x1, double y1, double x2, double y2) {
     Mergesort self = *selfp;
     turtlePenSize(2 * self.screenSize);
-    turtlePenColor(0, 0, 0);
     turtleGoto((x1 + self.screenX) * self.screenSize, (y1 + self.screenY) * self.screenSize);
     turtlePenDown();
     turtleGoto((x2 + self.screenX) * self.screenSize, (y2 + self.screenY) * self.screenSize);
@@ -191,9 +275,8 @@ void drawArrow(Mergesort *selfp, double x1, double y1, double x2, double y2) {
     turtlePenUp();
 }
 
-void renderArrayOne(Mergesort *selfp, double x, double y, int start, int end) {
+void renderArray(Mergesort *selfp, double x, double y, int start, int end, char array) {
     Mergesort self = *selfp;
-    turtlePenColor(0, 0, 0);
     turtlePenSize(2 * self.screenSize);
     double xpos = x + ((end - start + 1) / -2.0) * self.arraySegmentSize;
     for (int i = start; i < end + 1; i++) { 
@@ -202,7 +285,11 @@ void renderArrayOne(Mergesort *selfp, double x, double y, int start, int end) {
         turtleGoto((xpos + self.screenX) * self.screenSize, (y - 10 + self.screenY) * self.screenSize);
         turtlePenUp();
         char num[12];
-        sprintf(num, "%d", self.toSort -> data[i].i);
+        if (array == 1)
+            sprintf(num, "%d", self.toSort -> data[i].i);
+        else
+            sprintf(num, "%d", self.sorted -> data[array - 2].r -> data[i].i);
+        
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (y + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.5, 50);
         sprintf(num, "%d", i);
         textGLWriteString(num, (xpos + self.arraySegmentSize / 2 + self.screenX) * self.screenSize, (y + 17 + self.screenY) * self.screenSize, self.screenSize * self.arraySegmentSize * 0.3, 50);
@@ -216,22 +303,31 @@ void renderArrayOne(Mergesort *selfp, double x, double y, int start, int end) {
     turtlePenUp();
 }
 
-void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end) { // recursive graphics
+void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, int depth) { // recursive graphics
     Mergesort self = *selfp;
-    if (end - start > self.showDepth - 1) {
+    turtlePenColor(0, 0, 0);
+    if (depth > self.showDepth - 1) {
         list_append(self.middleCoords, (unitype) x, 'd');
         list_append(self.middleCoords, (unitype) y, 'd');
-        renderArrayOne(&self, x, y, start, end);
+        list_append(self.middleCoords, (unitype) start, 'i');
+        list_append(self.middleCoords, (unitype) end, 'i');
+        list_append(self.middleCoords, (unitype) depth, 'i');
+        renderArray(selfp, x, y, start, end, 1);
         double length = pow(2, ceil(log(end - start + 1) / log(2)));
         int length1 = ((end - start + 1) / 2);
         int length2 = end - start - length1 + 1;
         int newLength = pow(2, ceil(log(length2) / log(2)));
-        drawArrow(selfp, x - (length / 4.0) * self.arraySegmentSize, y - 20, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
-        drawArrow(selfp, x + (length / 4.0) * self.arraySegmentSize, y - 20, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
-        renderMergeArray(selfp, x - (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start, start + length1 - 1);
-        renderMergeArray(selfp, x + (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start + length1, end);
+        if (end - start > 0) {
+            drawArrow(selfp, x - (length / 4.0) * self.arraySegmentSize, y - 20, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
+            drawArrow(selfp, x + (length / 4.0) * self.arraySegmentSize, y - 20, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y - 40);
+            renderMergeArray(selfp, x + (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start + length1, end, depth - 1);
+            renderMergeArray(selfp, x - (newLength / 2.0 + 0.1 * newLength) * self.arraySegmentSize, y - 70, start, start + length1 - 1, depth - 1);
+        } else {
+            drawArrow(selfp, x, y - 20, x, y - 40);
+            renderMergeArray(selfp, x, y - 70, start, end, depth - 1);
+        }
     } else {
-        renderArrayOne(selfp, x, y, start, end);
+        renderArray(selfp, x, y, start, end, 1);
         list_append(self.bottomCoords, (unitype) x, 'd');
         list_append(self.bottomCoords, (unitype) y, 'd');
     }
@@ -239,8 +335,20 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end) 
 
 void renderMerging(Mergesort *selfp) {
     Mergesort self = *selfp;
-    for (int i = 0; i < self.bottomCoords -> length; i++) {
-
+    turtlePenColor(220, 220, 220);
+    for (int i = self.middleCoords -> length - 5; i > self.mergeState; i -= 5) {
+        double x = self.middleCoords -> data[i].d;
+        double y = self.minY - (self.middleCoords -> data[i + 1].d - self.minY);
+        int start = self.middleCoords -> data[i + 2].i;
+        int end = self.middleCoords -> data[i + 3].i;
+        double length = pow(2, ceil(log(end - start + 1) / log(2)));
+        renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i));
+        if (end - start > 0) {
+            drawArrow(selfp, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x - (length / 4.0) * self.arraySegmentSize, y + 30);
+            drawArrow(selfp, x + (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x + (length / 4.0) * self.arraySegmentSize, y + 30);
+        } else {
+            drawArrow(selfp, x, y + 50, x, y + 30);
+        }
     }
     *selfp = self;
 }
@@ -366,6 +474,15 @@ void hotkeyTick(Mergesort *selfp) {
             self.keys[3] = 1;
             int len = self.toSort -> length;
             list_free(self.toSort);
+            list_free(self.sorted);
+            list_free(self.bottomCoords);
+            list_free(self.middleCoords);
+            list_free(self.barPosition);
+            list_free(self.barGoto);
+            list_free(self.barLength);
+            list_free(self.barRecord);
+            list_free(self.barValue);
+            list_free(self.barValueSet);
             init(selfp, len);
             selfp -> screenX = self.screenX;
             selfp -> screenY = self.screenY;
@@ -413,7 +530,7 @@ int main(int argc, char *argv[]) {
         sscanf(argv[1], "%d\n", &listLength);
         init(&obj, listLength);
     }
-    int depth = (int) ceil(log(obj.toSort -> length) / log(2));
+    
     while (turtle.close == 0) { // main loop
         start = clock();
         turtleClear();
@@ -421,11 +538,19 @@ int main(int argc, char *argv[]) {
         scrollTick(&obj);
         hotkeyTick(&obj);
         list_clear(obj.bottomCoords);
-        renderMergeArray(&obj, 0, 150, 0, obj.toSort -> length - 1);
+        list_clear(obj.middleCoords);
+        renderMergeArray(&obj, 0, 150, 0, obj.toSort -> length - 1, obj.depth);
         if (obj.phase > 0) {
+            if (obj.minY == 0) {
+                for (int i = 1; i < obj.bottomCoords -> length; i += 2) {
+                    if (obj.bottomCoords -> data[i].d < obj.minY) {
+                        obj.minY = obj.bottomCoords -> data[i].d;
+                    }
+                }
+            }
             renderMerging(&obj);
         }
-        renderBar(&obj);
+        // renderBar(&obj);
         turtleUpdate(); // update the screen
         end = clock();
         // printf("ms: %d\n", end - start);
