@@ -4,11 +4,7 @@
 /* general design plan:
 Mergesort visualisation
 
-Yes, I know it's broken
-No, I do not know how to fix it
-I want to be done with this one, it's been three days
-
-This one is not as cool as quicksort and heapsort, mainly because it's kind of hard to make the bars animation work with something like this
+This one does not look as cool as quicksort and heapsort, mainly because it's kind of hard to make the bars animation work with something like this
 because of how memory is copied and indexes don't really "swap around" like they do in other sorts.
 
 I do want to eventually put a little thing on the side that lets you step through the merge algorithm, but that will have to wait for another day
