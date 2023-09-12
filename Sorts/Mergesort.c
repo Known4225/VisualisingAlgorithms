@@ -4,6 +4,10 @@
 /* general design plan:
 Mergesort visualisation
 
+Yes, I know it's broken
+No, I do not know how to fix it
+I want to be done with this one, it's been three days
+
 This one is not as cool as quicksort and heapsort, mainly because it's kind of hard to make the bars animation work with something like this
 because of how memory is copied and indexes don't really "swap around" like they do in other sorts.
 
@@ -26,6 +30,10 @@ typedef struct {
     double minY;
     int highlight;
     int highlightCyan;
+    int contributeGreen;
+    int contributeCyan;
+    int positionGreen;
+    int positionCyan;
     double mouseX;
     double mouseY;
     double focalX;
@@ -148,7 +156,7 @@ void init(Mergesort *selfp, int length) {
     }
     self.depth = (int) ceil(log(length) / log(2));
     self.showDepth = self.depth + 1;
-    self.mergeState = pow(2, self.depth) * 5 - 10;
+    self.mergeState = pow(2, self.depth) * 5 - 2 * 5; // stride
     self.mergeStateEnd = 0;
     self.sorted = list_init();
     for (int i = 0; i < self.depth + 1; i++) {
@@ -167,6 +175,10 @@ void init(Mergesort *selfp, int length) {
     self.minY = 0;
     self.highlight = -1;
     self.highlightCyan = -1;
+    self.contributeGreen = 0;
+    self.contributeCyan = 0;
+    self.positionGreen = 0;
+    self.positionCyan = 0;
     self.phase = 0;
     self.arraySegmentSize = 20;
     self.effectiveFront = 0;
@@ -245,13 +257,25 @@ void mergesortStep(Mergesort *selfp) { // iterative Mergesort
     } else if (self.phase == 1) {
         if (self.mergeState > -1) {
             if (self.mergeStateEnd == 0) {
-                self.mergeState -= 5;
-                self.mergeStateEnd = self.middleCoords -> data[self.mergeState + 5 + 3].i - self.middleCoords -> data[self.mergeState + 5 + 2].i;
+                self.mergeState -= 5; // stride
+                self.positionGreen = 0;
+                self.positionCyan = 0;
+                self.mergeStateEnd = self.middleCoords -> data[self.mergeState + 5 + 3].i - self.middleCoords -> data[self.mergeState + 5 + 2].i; // stride
             } else {
+                if (self.contributeGreen < self.contributeCyan) {
+                    self.positionGreen += 1;
+                } else {
+                    self.positionCyan += 1;
+                }
                 self.mergeStateEnd -= 1;
             }
         } else {
             if (self.mergeStateEnd > 0) {
+                if (self.contributeGreen < self.contributeCyan) {
+                    self.positionGreen += 1;
+                } else {
+                    self.positionCyan += 1;
+                }
                 self.mergeStateEnd -= 1;
             } else {
                 printf("operations: %d\n", self.operations);
@@ -350,7 +374,30 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, 
             renderMergeArray(selfp, x, y - 70, start, end, depth - 1);
         }
     } else {
-        renderArray(selfp, x, y, start, end, 1, -1, -1);
+        int powTwo = floor(pow(2, (self.middleCoords -> data[self.mergeState + 5 + 4].i)));
+        if ((int) self.middleCoords -> length - 5 > self.mergeState && powTwo == 2) {
+            if (start == self.middleCoords -> data[self.mergeState + 5 + 2].i) {
+                if (self.positionGreen > 0) {
+                    selfp -> contributeGreen = self.toSort -> length * 10;
+                    renderArray(selfp, x, y, start, end, 1, -1, -1);
+                } else {
+                    selfp -> contributeGreen = self.toSort -> data[start].i;
+                    renderArray(selfp, x, y, start, end, 1, start, -1);
+                }
+            } else if (start == self.middleCoords -> data[self.mergeState + 5 + 2].i + 1) {
+                if (self.positionCyan > 0) {
+                    selfp -> contributeCyan = self.toSort -> length * 10;
+                    renderArray(selfp, x, y, start, end, 1, -1, -1);
+                } else {
+                    selfp -> contributeCyan = self.toSort -> data[start].i;
+                    renderArray(selfp, x, y, start, end, 1, -1, start);
+                }
+            } else {
+                renderArray(selfp, x, y, start, end, 1, -1, -1);
+            }
+        } else {
+            renderArray(selfp, x, y, start, end, 1, -1, -1);
+        }
         list_append(self.bottomCoords, (unitype) x, 'd');
         list_append(self.bottomCoords, (unitype) y, 'd');
     }
@@ -359,30 +406,44 @@ void renderMergeArray(Mergesort *selfp, double x, double y, int start, int end, 
 void renderMerging(Mergesort *selfp) {
     Mergesort self = *selfp;
     turtlePenColor(120, 120, 120);
-    for (int i = self.middleCoords -> length - 5; i > self.mergeState; i -= 5) {
+    for (int i = self.middleCoords -> length - 5; i > self.mergeState; i -= 5) { // stride
         double x = self.middleCoords -> data[i].d;
         double y = self.minY - (self.middleCoords -> data[i + 1].d - self.minY);
         int start = self.middleCoords -> data[i + 2].i;
         int end = self.middleCoords -> data[i + 3].i;
+        int arraySelect = 2 + (self.depth - self.middleCoords -> data[i + 4].i);
         double length = pow(2, ceil(log(end - start + 1) / log(2)));
-        if (i == self.mergeState + 5) {
+        if (i == self.mergeState + 5) { // stride
             end -= self.mergeStateEnd;
             if (self.phase > 1) {
-                renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
+                renderArray(selfp, x, y, start, end, arraySelect, -1, -1);
             } else {
-                if (0) {
-                    renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), end, -1);
+                if (self.contributeGreen < self.contributeCyan) {
+                    renderArray(selfp, x, y, start, end, arraySelect, end, -1);
                 } else {
-                    renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, end);
+                    renderArray(selfp, x, y, start, end, arraySelect, -1, end);
                 }
             }
         }
-        if (i == self.mergeState + 10) {
-            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, start);
-        } else if (i == self.mergeState + 15) {
-            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), start, -1);
+        int parent1 = self.mergeState + 10; // stride
+        int powTwo = floor(pow(2, (self.middleCoords -> data[self.mergeState + 5 + 4].i)));
+        int parent2 = self.mergeState + 5 + 5 * powTwo / 2; // stride
+        if (i == parent1 && self.phase < 2 && powTwo != 2) {
+            if (start + self.positionCyan > end) {
+                self.contributeCyan = self.toSort -> length * 10;
+            } else {
+                self.contributeCyan = self.sorted -> data[arraySelect - 2].r -> data[start + self.positionCyan].i;
+            }
+            renderArray(selfp, x, y, start, end, arraySelect, -1, start + self.positionCyan);
+        } else if (i == parent2 && self.phase < 2 && powTwo != 2) {
+            if (start + self.positionGreen > end) {
+                self.contributeGreen = self.toSort -> length * 10;
+            } else {
+                self.contributeGreen = self.sorted -> data[arraySelect - 2].r -> data[start + self.positionGreen].i;
+            }
+            renderArray(selfp, x, y, start, end, arraySelect, start + self.positionGreen, -1);
         } else {
-            renderArray(selfp, x, y, start, end, 2 + (self.depth - self.middleCoords -> data[i + 4].i), -1, -1);
+            renderArray(selfp, x, y, start, end, arraySelect, -1, -1);
         }
         if (end - start > 0) {
             drawArrow(selfp, x - (length / 4.0 + 0.04 * length) * self.arraySegmentSize, y + 50, x - (length / 4.0) * self.arraySegmentSize, y + 30);

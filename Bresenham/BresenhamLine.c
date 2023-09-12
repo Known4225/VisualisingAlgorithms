@@ -24,6 +24,11 @@ typedef struct {
     double focalCSX;
     double focalCSY;
 
+    double realSlope;
+    double normalSlope;
+    int operations;
+    int octant;
+
     list_t *pixels;
 } Line;
 
@@ -65,8 +70,40 @@ void init(Line *selfp, double gridSize) {
     self.focalY = 0;
     self.focalCSX = 0;
     self.focalCSY = 0;
+    
+    self.realSlope = 0;
+    self.normalSlope = 0; // rotate the line 45 degrees until it is between 0 and 1
+    self.octant = 0;
+    self.operations = 0;
 
     self.pixels = list_init();
+    *selfp = self;
+}
+
+void bresenhamStep(Line *selfp) {
+    Line self = *selfp;
+    if (self.operations == 0) {
+        /* first step */
+        /* calculate slope and normalSlope */
+        self.octant = 0;
+        self.realSlope = (double) (self.pixel2[1] - self.pixel1[1]) / (self.pixel2[0] - self.pixel1[0]);
+        self.normalSlope = self.realSlope;
+        printf("test\n");
+        while (self.normalSlope > 1) {
+            self.octant += 1;
+            self.normalSlope -= 1;
+            printf("test2\n");
+        }
+        while (self.normalSlope < 0) {
+            self.octant += 7;
+            self.normalSlope += 1;
+            printf("%lf\n", self.normalSlope);
+        }
+        self.octant %= 8;
+        printf("octant: %d\n", self.octant);
+    } else {
+
+    }
     *selfp = self;
 }
 
@@ -81,7 +118,7 @@ void renderGrid(Line *selfp) { // renders the grid
     turtlePenColor(30, 30, 30);
     turtlePenSize(self.screenSize * 2);
     double startX = self.screenSize * (self.screenX - self.gridSize * (floor(self.screenX / self.gridSize) + 1 + floor(320 / (self.screenSize * self.gridSize))));
-    double startY = self.screenSize * (self.screenY - self.gridSize * (floor(self.screenY / self.gridSize) + 1 - floor(180 / (self.screenSize * self.gridSize))));
+    double startY = self.screenSize * (self.screenY - self.gridSize * (floor(self.screenY / self.gridSize) - floor(180 / (self.screenSize * self.gridSize))));
     double x = startX;
     double y = startY;
     for (int i = -1; i < (640 / (self.screenSize * self.gridSize)); i++) {
@@ -163,6 +200,7 @@ void mouseTick(Line *selfp) {
                         self.pixel1[0] = x;
                         self.pixel1[1] = y;
                         self.toggle = 0;
+                        self.operations = 0;
                     }
                 } else {
                     int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
@@ -171,6 +209,7 @@ void mouseTick(Line *selfp) {
                         self.pixel2[0] = x;
                         self.pixel2[1] = y;
                         self.toggle = 1;
+                        self.operations = 0;
                     }
                 }
             }
@@ -202,6 +241,10 @@ void hotkeyTick(Line *selfp) {
     if (turtleKeyPressed(GLFW_KEY_SPACE)) {
         if (self.keys[1] == 0) {
             self.keys[1] = 1;
+            if (self.pixel1[0] != 2147483647 && self.pixel2[0] != 2147483647) {
+                bresenhamStep(&self);
+                self.operations += 1;
+            }
         }
     } else {
         self.keys[1] = 0;
