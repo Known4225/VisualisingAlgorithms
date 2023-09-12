@@ -90,7 +90,7 @@ int *intMergesortEmb(Mergesort *selfp, int *list, int length, int depth, int sta
         selfp -> sorted -> data[depth].r -> data[j].i = list1[i];
         j++;
     }
-    for (int i = 0; i < halfLen; i++) {
+    for (int i = 0; i < length - halfLen; i++) {
         selfp -> sorted -> data[depth].r -> data[j].i = list2[i];
         j++;
     }
