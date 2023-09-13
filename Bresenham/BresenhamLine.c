@@ -24,10 +24,20 @@ typedef struct {
     double focalCSX;
     double focalCSY;
 
-    double realSlope;
-    double normalSlope;
     int operations;
     int octant;
+
+    int deltaX;
+    int deltaY;
+    int trackX;
+    int trackY;
+    int error;
+
+    char leftRight;
+    char topBottom;
+    char evenOdd;
+    char horizVert;
+    
 
     list_t *pixels;
 } Line;
@@ -71,10 +81,20 @@ void init(Line *selfp, double gridSize) {
     self.focalCSX = 0;
     self.focalCSY = 0;
     
-    self.realSlope = 0;
-    self.normalSlope = 0; // rotate the line 45 degrees until it is between 0 and 1
     self.octant = 0;
     self.operations = 0;
+
+    /* bresenham components */
+    self.deltaX = 0;
+    self.deltaY = 0;
+    self.trackX = 0;
+    self.trackY = 0;
+    self.error = 0;
+
+    self.leftRight = 0;
+    self.topBottom = 0;
+    self.horizVert = 0;
+    
 
     self.pixels = list_init();
     *selfp = self;
@@ -84,25 +104,127 @@ void bresenhamStep(Line *selfp) {
     Line self = *selfp;
     if (self.operations == 0) {
         /* first step */
-        /* calculate slope and normalSlope */
-        self.octant = 0;
-        self.realSlope = (double) (self.pixel2[1] - self.pixel1[1]) / (self.pixel2[0] - self.pixel1[0]);
-        self.normalSlope = self.realSlope;
-        printf("test\n");
-        while (self.normalSlope > 1) {
-            self.octant += 1;
-            self.normalSlope -= 1;
-            printf("test2\n");
-        }
-        while (self.normalSlope < 0) {
-            self.octant += 7;
-            self.normalSlope += 1;
-            printf("%lf\n", self.normalSlope);
-        }
-        self.octant %= 8;
-        printf("octant: %d\n", self.octant);
-    } else {
+        double slope = (double) (self.pixel2[1] - self.pixel1[1]) / (self.pixel2[0] - self.pixel1[0]);
 
+        if (self.pixel1[0] > self.pixel2[0] || self.pixel1[0] == self.pixel2[0] && self.pixel1[1] > self.pixel2[1]) {
+            /* left */
+            self.leftRight = 0;
+            self.deltaX = (self.pixel1[0] - self.pixel2[0]);
+        } else {
+            /* right */
+            self.leftRight = 1;
+            self.deltaX = (self.pixel2[0] - self.pixel1[0]);
+            
+        }
+        if (self.pixel1[1] > self.pixel2[1]) {
+            /* bottom */
+            self.topBottom = 1;
+            self.deltaY = (self.pixel1[1] - self.pixel2[1]);
+        } else {
+            /* top */
+            self.topBottom = 0;
+            self.deltaY = (self.pixel2[1] - self.pixel1[1]);
+        }
+
+        if (fabs(slope) > 1) {
+            /* vertically aligned */
+            self.horizVert = 1;
+        } else {
+            /* horizontally aligned */
+            self.horizVert = 0;
+        }
+
+        
+        // if (self.topBottom) {
+        //     if (self.leftRight) {
+        //         /* bottom right */
+        //         if (fabs(slope) > 1) {
+        //             self.octant = 6;
+        //             self.evenOdd = 0;
+        //             self.horizVert = 1;
+        //         } else {
+        //             self.octant = 7;
+        //             self.evenOdd = 1;
+        //             self.horizVert = 0;
+        //         }
+        //     } else {
+        //         /* bottom left */
+        //         if (fabs(slope) > 1) {
+        //             self.octant = 5;
+        //             self.evenOdd = 1;
+        //             self.horizVert = 1;
+        //         } else {
+        //             self.octant = 4;
+        //             self.evenOdd = 0;
+        //             self.horizVert = 0;
+        //         }
+        //     }
+        // } else {
+        //     if (self.leftRight) {
+        //         /* top right */
+        //         if (fabs(slope) > 1) {
+        //             self.octant = 1;
+        //             self.evenOdd = 1;
+        //             self.horizVert = 1;
+        //         } else {
+        //             self.octant = 0;
+        //             self.evenOdd = 0;
+        //             self.horizVert = 0;
+        //         }
+        //     } else {
+        //         /* top left */
+        //         if (fabs(slope) > 1) {
+        //             self.octant = 2;
+        //             self.evenOdd = 0;
+        //             self.horizVert = 1;
+        //         } else {
+        //             self.octant = 3;
+        //             self.evenOdd = 1;
+        //             self.horizVert = 0;
+        //         }
+        //     }
+        // }
+        // printf("octant: %d\n", self.octant);
+
+        self.trackY = self.pixel1[1];
+        self.error = 0;
+        self.trackX = self.pixel1[0];
+    } else {
+        if (self.horizVert) {
+            if ((self.topBottom && self.trackY >= self.pixel2[1]) || (!self.topBottom) && self.trackY <= self.pixel2[1]) {
+                list_append(self.pixels, (unitype) self.trackX, 'i');
+                list_append(self.pixels, (unitype) self.trackY, 'i');
+                self.error += self.deltaX;
+                if ((self.error << 1) >= self.deltaY) {
+                    if (self.leftRight)
+                        self.trackX++;
+                    else
+                        self.trackX--;
+                    self.error -= self.deltaY;
+                }
+                if (self.topBottom)
+                    self.trackY--;
+                else
+                    self.trackY++;
+            }
+        } else {
+            if ((!self.leftRight && self.trackX >= self.pixel2[0]) || (self.leftRight) && self.trackX <= self.pixel2[0]) {
+                list_append(self.pixels, (unitype) self.trackX, 'i');
+                list_append(self.pixels, (unitype) self.trackY, 'i');
+                self.error += self.deltaY;
+                if ((self.error << 1) >= self.deltaX) {
+                    if (self.topBottom)
+                        self.trackY--;
+                    else
+                        self.trackY++;
+                    self.error -= self.deltaX;
+                }
+                if (self.leftRight)
+                    self.trackX++;
+                else
+                    self.trackX--;
+            }
+        }
     }
     *selfp = self;
 }
@@ -116,7 +238,7 @@ void renderGrid(Line *selfp) { // renders the grid
     then it will move an additional floor(320 / (self.screenSize * self.gridSize))
     */
     turtlePenColor(30, 30, 30);
-    turtlePenSize(self.screenSize * 2);
+    turtlePenSize(self.screenSize);
     double startX = self.screenSize * (self.screenX - self.gridSize * (floor(self.screenX / self.gridSize) + 1 + floor(320 / (self.screenSize * self.gridSize))));
     double startY = self.screenSize * (self.screenY - self.gridSize * (floor(self.screenY / self.gridSize) - floor(180 / (self.screenSize * self.gridSize))));
     double x = startX;
@@ -147,21 +269,29 @@ void renderPixels(Line *selfp) { // renders all coloured in pixels
         (self.pixel1[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.screenY) * self.screenSize, 
         (self.pixel1[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         (self.pixel1[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
-        0, 0, 0, 0);
+        50, 50, 50, 0);
     }
     if (self.pixel2[0] != 2147483647) {
         turtleQuad((self.pixel2[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.screenY) * self.screenSize, 
         (self.pixel2[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.screenY) * self.screenSize, 
         (self.pixel2[0] * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         (self.pixel2[0] * self.gridSize + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
-        0, 0, 0, 0);
+        50, 50, 50, 0);
     }
     for (int i = 0; i < self.pixels -> length; i += 2) {
-        turtleQuad((self.pixels -> data[i].i + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.screenY) * self.screenSize, 
+        turtleQuad((self.pixels -> data[i].i * self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.screenY) * self.screenSize, 
         (self.pixels -> data[i].i * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.screenY) * self.screenSize, 
         (self.pixels -> data[i].i * self.gridSize + self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         (self.pixels -> data[i].i * self.gridSize + self.screenX) * self.screenSize, (self.pixels -> data[i + 1].i * self.gridSize + self.gridSize + self.screenY) * self.screenSize,
         0, 0, 0, 0);
+    }
+    if (self.operations > 0) {
+        turtlePenColor(0, 0, 0);
+        turtlePenSize(3 * self.screenSize);
+        turtleGoto((self.pixel1[0] * self.gridSize + self.gridSize / 2 + self.screenX) * self.screenSize, (self.pixel1[1] * self.gridSize + self.gridSize / 2 + self.screenY) * self.screenSize);
+        turtlePenDown();
+        turtleGoto((self.pixel2[0] * self.gridSize + self.gridSize / 2 + self.screenX) * self.screenSize, (self.pixel2[1] * self.gridSize + self.gridSize / 2 + self.screenY) * self.screenSize);
+        turtlePenUp();
     }
     *selfp = self;
 }
@@ -197,8 +327,8 @@ void mouseTick(Line *selfp) {
                     int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
                     int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
                     if (x != self.pixel2[0] || y != self.pixel2[1]) {
-                        self.pixel1[0] = x;
-                        self.pixel1[1] = y;
+                        self.pixel2[0] = x;
+                        self.pixel2[1] = y;
                         self.toggle = 0;
                         self.operations = 0;
                     }
@@ -206,8 +336,8 @@ void mouseTick(Line *selfp) {
                     int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
                     int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
                     if (x != self.pixel1[0] || y != self.pixel1[1]) {
-                        self.pixel2[0] = x;
-                        self.pixel2[1] = y;
+                        self.pixel1[0] = x;
+                        self.pixel1[1] = y;
                         self.toggle = 1;
                         self.operations = 0;
                     }
@@ -245,13 +375,20 @@ void hotkeyTick(Line *selfp) {
                 bresenhamStep(&self);
                 self.operations += 1;
             }
+        } else {
+            self.keys[2] += 1;
+            if (self.keys[2] > 30) {
+                self.keys[1] = 0;
+                self.keys[2] = 31;
+            }
         }
     } else {
         self.keys[1] = 0;
+        self.keys[2] = 0;
     }
     if (turtleKeyPressed(GLFW_KEY_C)) {
-        if (self.keys[2] == 0) {
-            self.keys[2] = 1;
+        if (self.keys[3] == 0) {
+            self.keys[3] = 1;
             list_clear(self.pixels);
             for (int i = 0; i < 2; i++) {
                 self.pixel1[i] = 2147483647;
@@ -260,7 +397,7 @@ void hotkeyTick(Line *selfp) {
             self.toggle = 0;
         }
     } else {
-        self.keys[2] = 0;
+        self.keys[3] = 0;
     }
     *selfp = self;
 }
