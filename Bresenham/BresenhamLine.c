@@ -7,7 +7,7 @@ Bresenham's algorithms
 */
 
 typedef struct {
-    char keys[4]; // for keybinds
+    char keys[5]; // for keybinds
     char toggle; // for placing first and second points
     int pixel1[2]; // x, y coordinates for pixel1 (starting pixel) on the grid
     int pixel2[2];
@@ -60,7 +60,7 @@ extern inline double dmod(double a, double modulus) { // always positive mod
 
 void init(Line *selfp, double gridSize) {
     Line self = *selfp;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         self.keys[i] = 0;
     }
     for (int i = 0; i < 2; i++) {
@@ -186,9 +186,10 @@ void bresenhamStep(Line *selfp) {
         // }
         // printf("octant: %d\n", self.octant);
 
+        self.trackX = self.pixel1[0];
         self.trackY = self.pixel1[1];
         self.error = 0;
-        self.trackX = self.pixel1[0];
+        
     } else {
         if (self.horizVert) {
             if ((self.topBottom && self.trackY >= self.pixel2[1]) || (!self.topBottom) && self.trackY <= self.pixel2[1]) {
@@ -224,6 +225,86 @@ void bresenhamStep(Line *selfp) {
                 else
                     self.trackX--;
             }
+        }
+    }
+    *selfp = self;
+}
+
+void instantLine(Line *selfp, int x1, int y1, int x2, int y2) {
+    Line self = *selfp;
+    /* first step */
+    double slope = (double) (y2 - y1) / (x2 - x1);
+    int deltaX;
+    int deltaY;
+    char leftRight;
+    char topBottom;
+    char horizVert;
+    if (x1 > x2 || x1 == x2 && y1 > y2) {
+        /* left */
+        leftRight = 0;
+        deltaX = (x1 - x2);
+    } else {
+        /* right */
+        leftRight = 1;
+        deltaX = (x2 - x1);
+        
+    }
+    if (y1 > y2) {
+        /* bottom */
+        topBottom = 1;
+        deltaY = (y1 - y2);
+    } else {
+        /* top */
+        topBottom = 0;
+        deltaY = (y2 - y1);
+    }
+
+    if (fabs(slope) > 1) {
+        /* vertically aligned */
+        horizVert = 1;
+    } else {
+        /* horizontally aligned */
+        horizVert = 0;
+    }
+
+    int trackX = x1;
+    int trackY = y1;
+    int error = 0;
+    
+
+    if (horizVert) {
+        while ((topBottom && trackY >= y2) || (!topBottom) && trackY <= y2) {
+            list_append(self.pixels, (unitype) trackX, 'i');
+            list_append(self.pixels, (unitype) trackY, 'i');
+            error += deltaX;
+            if ((error << 1) >= deltaY) {
+                if (leftRight)
+                    trackX++;
+                else
+                    trackX--;
+                error -= deltaY;
+            }
+            if (topBottom)
+                trackY--;
+            else
+                trackY++;
+        }
+    } else {
+        while ((!leftRight && trackX >= x2) || (leftRight) && trackX <= x2) {
+            list_append(self.pixels, (unitype) trackX, 'i');
+            list_append(self.pixels, (unitype) trackY, 'i');
+            error += deltaY;
+            if ((error << 1) >= deltaX) {
+                if (topBottom)
+                    trackY--;
+                else
+                    trackY++;
+                error -= deltaX;
+            }
+            if (leftRight)
+                trackX++;
+            else
+                trackX--;
         }
     }
     *selfp = self;
@@ -327,6 +408,7 @@ void mouseTick(Line *selfp) {
                     int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
                     int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
                     if (x != self.pixel2[0] || y != self.pixel2[1]) {
+                        list_clear(self.pixels);
                         self.pixel2[0] = x;
                         self.pixel2[1] = y;
                         self.toggle = 0;
@@ -336,6 +418,7 @@ void mouseTick(Line *selfp) {
                     int x = floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize));
                     int y = floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize));
                     if (x != self.pixel1[0] || y != self.pixel1[1]) {
+                        list_clear(self.pixels);
                         self.pixel1[0] = x;
                         self.pixel1[1] = y;
                         self.toggle = 1;
@@ -398,6 +481,26 @@ void hotkeyTick(Line *selfp) {
         }
     } else {
         self.keys[3] = 0;
+    }
+    if (turtleKeyPressed(GLFW_KEY_A)) {
+        if (self.keys[4] == 0) {
+            self.keys[4] = 1;
+        }
+        if (self.pixel1[0] == 2147483647) {
+            self.pixel1[0] = 0;
+            self.pixel1[1] = 0;
+        }
+        // self.pixel2[0] = 2147483647;
+        // self.pixel2[1] = 2147483647;
+        self.toggle = 1;
+        self.operations = 0;
+        list_clear(self.pixels);
+        instantLine(&self, self.pixel1[0], self.pixel1[1], floor(((self.mouseX / self.screenSize - self.screenX) / self.gridSize)), floor(((self.mouseY / self.screenSize - self.screenY) / self.gridSize)));
+    } else {
+        if (self.keys[4] == 1) {
+            list_clear(self.pixels);
+            self.keys[4] = 0;
+        }
     }
     *selfp = self;
 }
