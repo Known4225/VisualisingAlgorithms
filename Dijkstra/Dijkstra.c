@@ -1,4 +1,4 @@
-#include "include/textGL.h"
+#include "../include/textGL.h"
 #include <time.h>
 
 typedef struct {
