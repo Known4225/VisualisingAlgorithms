@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
     glfwWindowHint(GLFW_SAMPLES, 4); // MSAA (Anti-Aliasing) with 4 samples (must be done before window is created (?))
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(1280, 720, "textGLTest", NULL, NULL);
+    window = glfwCreateWindow(1280, 720, "Wagner-Fischer", NULL, NULL);
     if (!window) {
         glfwTerminate();
     }
@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
     /* initialize turtle */
     turtleInit(window, -320, -180, 320, 180);
     /* initialise textGL */
-    textGLInit(window, "include/fontBez.tgl");
+    textGLInit(window, "../include/fontBez.tgl");
 
     int tps = 60; // ticks per second (locked to fps in this case)
     clock_t start, end;

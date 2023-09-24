@@ -380,7 +380,7 @@ int main(int argc, char *argv[]) {
     /* initialize turtle */
     turtleInit(window, -320, -180, 320, 180);
     /* initialise textGL */
-    textGLInit(window, "include/fontBez.tgl");
+    textGLInit(window, "../include/fontBez.tgl");
 
     int tps = 60; // ticks per second (locked to fps in this case)
     clock_t start, end;
