@@ -1,9 +1,10 @@
-#include "include/turtle.h"
+#include "../include/turtle.h"
 #include <time.h>
 
 /*
 Bresenham's algorithms
-
+Line algorithm
+Circle algorithm
 */
 
 typedef struct {

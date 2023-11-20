@@ -3,7 +3,8 @@
 
 /*
 Bresenham's algorithms
-
+Line algorithm
+Circle algorithm
 */
 
 typedef struct {
