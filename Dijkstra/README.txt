@@ -13,8 +13,8 @@ Keybinds:
 Click and drag: move nodes around, you cannot move nodes while Dijkstra is running
 Click on a node to set it as a start/end point
 Press space to advance through the animation (Dijkstra's algorithm)
-Press E to toggle distance numbers
 Press C to clear nodes
 Press R to stop Dijkstra
+Press Q to regenerate new graph
 Press 1 to summon a node
 Hold Shift and drag from a node to another to create a connection

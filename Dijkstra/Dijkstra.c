@@ -288,7 +288,7 @@ void stepDijkstra(Dijkstra *selfp) {
             } 
         }
         for (int i = 0; i < headNeighbors -> length; i += 2) {
-            char visited = 0;
+            int visited = 0;
             for (int j = 0; j < self.queue -> length; j += 3) { // check if in queue
                 if (self.queue -> data[j].i == headNeighbors -> data[i].i) {
                     visited = j;
@@ -300,7 +300,7 @@ void stepDijkstra(Dijkstra *selfp) {
                     self.queue -> data[visited + 1] = (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d);
                     self.queue -> data[visited + 2] = self.queue -> data[0];
                     int j = visited + 1;
-                    while (self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
+                    while (j > 4 && self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
                         unitype temp1 = self.queue -> data[j - 1];
                         unitype temp2 = self.queue -> data[j];
                         unitype temp3 = self.queue -> data[j + 1];
@@ -325,7 +325,7 @@ void stepDijkstra(Dijkstra *selfp) {
                     list_append(self.queue, (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d), 'd');
                     list_append(self.queue, (unitype) self.queue -> data[0].i, 'i');
                     int j = self.queue -> length - 2;
-                    while (self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
+                    while (j > 4 && self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
                         unitype temp1 = self.queue -> data[j - 1];
                         unitype temp2 = self.queue -> data[j];
                         unitype temp3 = self.queue -> data[j + 1];
@@ -346,10 +346,6 @@ void stepDijkstra(Dijkstra *selfp) {
         list_delete(self.queue, 0);
         list_delete(self.queue, 0);
         list_delete(self.queue, 0);
-        // printf("completed: ");
-        // list_print(self.completed);
-        // printf("queue: ");
-        // list_print(self.queue);
         if (self.queue -> length == 0 || self.completed -> data[self.completed -> length - 3].i == self.end) {
             if (self.completed -> data[self.completed -> length - 3].i != self.end) {
                 //printf("no path found\n");
@@ -396,7 +392,6 @@ void renderGraph(Dijkstra *selfp) { // renders the nodes
                         }
                     }
                 }
-                
             }
         }
         turtlePenSize(self.size -> data[i].d * self.screenSize);
@@ -459,7 +454,7 @@ void renderConnections(Dijkstra *selfp) { // renders the connections between nod
                 }
             }
         }
-            turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
+        turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
         turtlePenUp();
