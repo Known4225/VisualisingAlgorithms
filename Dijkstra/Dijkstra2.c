@@ -1,24 +1,14 @@
 #include "../include/textGL.h"
 #include <time.h>
 
-/* general design plan:
-no "node" class
-instead, node data is kept in a series of lists in the "graph" class
-for each node attribute, there is a list
-nodes can be identified by their position in these lists, which is the same throughout them all
-
-The VanDeGraaphGenerator uses such techniques as can be found:
-http://igm.univ-mlv.fr/~fusy/
-http://igm.univ-mlv.fr/~fusy/Articles/Fusy08_planar_graphs.pdf
-https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/untangle.html
-https://en.wikipedia.org/wiki/F%C3%A1ry%27s_theorem
-Actually it doesn't because math is too hard
-Instead it uses my own badAlgorithm™ to generate planar graphs
-and it works every time!*
-
+/*
+This is a modification of the VanDeGraaph Generator to apply pathfinding algorithms
+It's essentially a more polished version of the Dijkstra program
+It also has heuristic capabilities
 */
 
 typedef struct {
+    /* Graph stuff */
     list_t *xpos; // visual components
     list_t *ypos;
     list_t *size;
@@ -46,6 +36,15 @@ typedef struct {
     int wireStart;
     int wireEnd;
     list_t *connections; // AoS - node1, node2, distance
+
+    /* Dijkstra stuff */
+    char finishedDijkstra;
+    int stepNum;
+    int start; // start and end nodes for dijkstra's algorithm
+    int end;
+    list_t *heuristic; // heuristic values for nodes
+    list_t *completed; // list of completed nodes
+    list_t *queue; // priority queue of unconquered nodes
 } Dijkstra;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -54,6 +53,13 @@ extern inline int randomInt(int lowerBound, int upperBound) { // random integer 
 
 extern inline double randomDouble(double lowerBound, double upperBound) { // random double between lower and upper bound
     return (rand() * (upperBound - lowerBound) / RAND_MAX + lowerBound); // probably works idk
+}
+
+double heuristic(Dijkstra *selfp, int node1, int node2) { // a simple distance heuristic
+    Dijkstra self = *selfp;
+    double x = self.xpos -> data[node1].d - self.xpos -> data[node2].d;
+    double y = self.ypos -> data[node1].d - self.ypos -> data[node2].d;
+    return sqrt(x * x + y * y);
 }
 
 void init(Dijkstra *selfp, int nodeCount) {
@@ -208,6 +214,125 @@ void init(Dijkstra *selfp, int nodeCount) {
     self.wireStart = -1;
     self.showDistances = 0;
     self.changeDistances = 0;
+
+    /* Dijkstra */
+    self.start = -1;
+    self.end = -1;
+    self.finishedDijkstra = 0;
+    self.stepNum = 0;
+    self.completed = list_init();
+    self.queue = list_init();
+    *selfp = self;
+}
+
+void setupDijkstra(Dijkstra *selfp) {
+    Dijkstra self = *selfp;
+    self.heuristic = list_init();
+    for (int i = 0; i < self.xpos -> length; i++) { // load heuristic values
+        list_append(self.heuristic, (unitype) heuristic(&self, i, self.end), 'd');
+    }
+    if (self.start != -1 && self.end != -1) {
+        self.stepNum = 0;
+        self.finishedDijkstra = 0;
+        list_clear(self.completed);
+        list_clear(self.queue);
+        list_append(self.queue, (unitype) self.start, 'i'); // node ID
+        list_append(self.queue, (unitype) 0.0, 'd'); // shortest known distance from start
+        list_append(self.queue, (unitype) -1, 'i'); // previous node ID for shortest path
+    }
+    *selfp = self;
+}
+
+void stepDijkstra(Dijkstra *selfp) {
+    Dijkstra self = *selfp;
+    if (self.finishedDijkstra) {
+        self.finishedDijkstra = 2;
+    }
+    if (self.queue -> length > 0 && !self.finishedDijkstra) {
+        self.stepNum += 1;
+        int head = self.queue -> data[0].i; // next up in queue
+        list_t *headNeighbors = list_init();
+        for (int i = 0; i < self.connections -> length; i += 3) {
+            if (self.connections -> data[i].i == head) {
+                list_append(headNeighbors, self.connections -> data[i + 1], 'i');
+            }
+            if (self.connections -> data[i + 1].i == head) {
+                list_append(headNeighbors, self.connections -> data[i], 'i');
+            } 
+        }
+        for (int i = 0; i < headNeighbors -> length; i += 2) {
+            char visited = 0;
+            for (int j = 0; j < self.queue -> length; j += 3) { // check if in queue
+                if (self.queue -> data[j].i == headNeighbors -> data[i].i) {
+                    visited = j;
+                    break;
+                }
+            }
+            if (visited) { // is in queue
+                if (self.queue -> data[1].d + headNeighbors -> data[i + 1].d < self.queue -> data[visited + 1].d) { // if new path is shorter than old path
+                    self.queue -> data[visited + 1] = (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d);
+                    self.queue -> data[visited + 2] = self.queue -> data[0];
+                    int j = visited + 1;
+                    while (self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
+                        unitype temp1 = self.queue -> data[j - 1];
+                        unitype temp2 = self.queue -> data[j];
+                        unitype temp3 = self.queue -> data[j + 1];
+                        self.queue -> data[j - 1] = self.queue -> data[j - 4];
+                        self.queue -> data[j] = self.queue -> data[j - 3];
+                        self.queue -> data[j + 1] = self.queue -> data[j - 2];
+                        self.queue -> data[j - 4] = temp1;
+                        self.queue -> data[j - 3] = temp2;
+                        self.queue -> data[j - 2] = temp3;
+                        j -= 3;
+                    }
+                }
+            } else {
+                for (int j = 0; j < self.completed -> length; j += 3) { // check if in completed
+                    if (self.completed -> data[j].i == headNeighbors -> data[i].i) {
+                        visited = 1;
+                        break;
+                    }
+                }
+                if (!visited) { // is not in queue or completed lists
+                    list_append(self.queue, (unitype) headNeighbors -> data[i].i, 'i');
+                    list_append(self.queue, (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d), 'd');
+                    list_append(self.queue, (unitype) self.queue -> data[0].i, 'i');
+                    int j = self.queue -> length - 2;
+                    while (self.queue -> data[j].d < self.queue -> data[j - 3].d) { // swap adjacents
+                        unitype temp1 = self.queue -> data[j - 1];
+                        unitype temp2 = self.queue -> data[j];
+                        unitype temp3 = self.queue -> data[j + 1];
+                        self.queue -> data[j - 1] = self.queue -> data[j - 4];
+                        self.queue -> data[j] = self.queue -> data[j - 3];
+                        self.queue -> data[j + 1] = self.queue -> data[j - 2];
+                        self.queue -> data[j - 4] = temp1;
+                        self.queue -> data[j - 3] = temp2;
+                        self.queue -> data[j - 2] = temp3;
+                        j -= 3;
+                    }
+                }
+            }
+        }
+        list_append(self.completed, self.queue -> data[0], 'i');
+        list_append(self.completed, self.queue -> data[1], 'd');
+        list_append(self.completed, self.queue -> data[2], 'i');
+        list_delete(self.queue, 0);
+        list_delete(self.queue, 0);
+        list_delete(self.queue, 0);
+        // printf("completed: ");
+        // list_print(self.completed);
+        // printf("queue: ");
+        // list_print(self.queue);
+        if (self.queue -> length == 0 || self.completed -> data[self.completed -> length - 3].i == self.end) {
+            if (self.completed -> data[self.completed -> length - 3].i != self.end) {
+                //printf("no path found\n");
+            }
+            //printf("finished!\n");
+            self.finishedDijkstra = 1;
+        } else {
+            //printf("stepped!\n");
+        }
+    }
     *selfp = self;
 }
 
