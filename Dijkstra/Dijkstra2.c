@@ -189,7 +189,7 @@ void init(Dijkstra *selfp, int nodeCount) {
             if (!eligible) {
                 list_append(self.connections, (unitype) i, 'i'); // adds i and j after, signifying that they are connected
                 list_append(self.connections, (unitype) j, 'i');
-                list_append(self.connections, (unitype) randomDouble(40, 160), 'd'); // distance (weight value)
+                list_append(self.connections, (unitype) randomDouble(4, 16), 'd'); // distance (weight value)
             }
         }
     }
@@ -216,7 +216,7 @@ void init(Dijkstra *selfp, int nodeCount) {
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
     self.wireStart = -1;
-    self.showDistances = 0;
+    self.showDistances = 1;
     self.changeDistances = 0;
 
     /* Dijkstra */
@@ -260,9 +260,25 @@ void stepDijkstra(Dijkstra *selfp) {
         for (int i = 0; i < self.connections -> length; i += 3) {
             if (self.connections -> data[i].i == head) {
                 list_append(headNeighbors, self.connections -> data[i + 1], 'i');
+                if (self.changeDistances) {
+                    list_append(headNeighbors, (unitype) (self.connections -> data[i + 2].d * sqrt((self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) * 
+                                                                                                  (self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) + 
+                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d) * 
+                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d))), 'd');
+                } else {
+                    list_append(headNeighbors, self.connections -> data[i + 2], 'd');
+                }
             }
             if (self.connections -> data[i + 1].i == head) {
                 list_append(headNeighbors, self.connections -> data[i], 'i');
+                if (self.changeDistances) {
+                    list_append(headNeighbors, (unitype) (self.connections -> data[i + 2].d * sqrt((self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) * 
+                                                                                                  (self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) + 
+                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d) * 
+                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d))), 'd');
+                } else {
+                    list_append(headNeighbors, self.connections -> data[i + 2], 'd');
+                }
             } 
         }
         for (int i = 0; i < headNeighbors -> length; i += 2) {
@@ -388,15 +404,56 @@ void renderGraph(Dijkstra *selfp) { // renders the nodes
 }
 
 void renderShortestPath(Dijkstra *selfp) {
-    
+    Dijkstra self = *selfp;
+    int i = self.completed -> length - 3;
+    for (; i > -1; i -= 3) { // find end (should be the last one in the completed list but shit happens)
+        if (self.completed -> data[i].i == self.end) {
+            break;
+        }
+    }
+    if (i < 0) {
+        return; // no path exists
+    }
+    turtleGoto((self.xpos -> data[self.end].d + self.screenX) * self.screenSize, (self.ypos -> data[self.end].d + self.screenY) * self.screenSize); 
+    turtlePenColor(self.specColor[12], self.specColor[13], self.specColor[14]);
+    turtlePenSize(8 / (log(self.xpos -> length) + 1) * self.screenSize);
+    turtlePenDown();
+    int next = self.completed -> data[i + 2].i;
+    while (next != -1) {
+        turtleGoto((self.xpos -> data[next].d + self.screenX) * self.screenSize, (self.ypos -> data[next].d + self.screenY) * self.screenSize);
+        for (int j = 0; j < self.completed -> length; j += 3) {
+            if (self.completed -> data[j].i == next) { // should always find a match
+                next = self.completed -> data[j + 2].i;
+                break;
+            }
+        }
+    }
+    turtlePenUp();
+    *selfp = self; // just for safety
 }
 
 void renderConnections(Dijkstra *selfp) { // renders the connections between nodes
     Dijkstra self = *selfp;
     turtlePenSize(5 / (log(self.xpos -> length) + 1) * self.screenSize);
-    turtlePenColor(60, 60, 60);
     for (int i = 0; i < self.connections -> length; i += 3) {
-        turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
+        turtlePenColor(60, 60, 60);
+        int j = 0;
+        for (; j < self.queue -> length; j += 3) {
+            if ((self.connections -> data[i].i == self.queue -> data[j].i && self.connections -> data[i + 1].i == self.queue -> data[j + 2].i) || (self.connections -> data[i + 1].i == self.queue -> data[j].i && self.connections -> data[i].i == self.queue -> data[j + 2].i)) {
+                turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
+                break;
+            }
+        }
+        if (j >= self.queue -> length) {
+            j = 0;
+            for (; j < self.completed -> length; j += 3) {
+                if ((self.connections -> data[i].i == self.completed -> data[j].i && self.connections -> data[i + 1].i == self.completed -> data[j + 2].i) || (self.connections -> data[i + 1].i == self.completed -> data[j].i && self.connections -> data[i].i == self.completed -> data[j + 2].i)) {
+                    turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
+                    break;
+                }
+            }
+        }
+            turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
         turtlePenDown();
         turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
         turtlePenUp();
@@ -577,7 +634,7 @@ void mouseTick(Dijkstra *selfp) {
                 if (!found) {
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
-                    list_append(self.connections, (unitype) randomDouble(40, 160), 'd');
+                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
                 }
             }
             if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
@@ -752,7 +809,7 @@ void hotkeyTick(Dijkstra *selfp) {
         if (self.keys[7] == 0) {
             self.keys[7] = 1;
             if (self.showDistances) {
-                self.showDistances = 0;
+                self.showDistances = 1;
             } else {
                 self.showDistances = 1;
             }
