@@ -7,3 +7,5 @@ val:
 clean:
 	rm Dijkstra.o
 	rm AStar.o
+graph:
+	gcc Dijkstra2.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o Dijkstra2.o
