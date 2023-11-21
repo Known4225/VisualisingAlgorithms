@@ -1,3 +1,5 @@
 git add .
-git commit -m "CSELabs commit"
+echo -n "message: "
+read commitMessage
+git commit -m "$commitMessage"
 git push
