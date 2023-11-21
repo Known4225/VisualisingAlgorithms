@@ -28,7 +28,8 @@ typedef struct {
     double focalCSX;
     double focalCSY;
     double scrollSpeed;
-    char keys[8]; // for keybinds
+    double specColor[15]; // colours for start and end
+    char keys[10]; // for keybinds
     char selected;
     char selectMode;
     char showDistances; // toggle showing or hiding distance numbers
@@ -38,6 +39,7 @@ typedef struct {
     list_t *connections; // AoS - node1, node2, distance
 
     /* Dijkstra stuff */
+    char toggle;
     char finishedDijkstra;
     int stepNum;
     int start; // start and end nodes for dijkstra's algorithm
@@ -194,6 +196,8 @@ void init(Dijkstra *selfp, int nodeCount) {
     list_free(rankedDistances);
 
     /* general */
+    double colors[15] = {38, 235, 242, 38, 235, 242, 116, 255, 133, 19, 236, 48, 255, 255, 255};
+    memcpy(self.specColor, colors, sizeof(double) * 15);
     for (int i = 0; i < 8; i++) {
         self.keys[i] = 0;
     }
@@ -219,6 +223,7 @@ void init(Dijkstra *selfp, int nodeCount) {
     self.start = -1;
     self.end = -1;
     self.finishedDijkstra = 0;
+    self.toggle = 0;
     self.stepNum = 0;
     self.completed = list_init();
     self.queue = list_init();
@@ -346,7 +351,32 @@ void renderGraph(Dijkstra *selfp) { // renders the nodes
             turtlePenDown();
             turtlePenUp();
         }
-        turtlePenColorAlpha(self.red -> data[i].d, self.green -> data[i].d, self.blue -> data[i].d, self.alpha -> data[i].d);
+        if (self.start == i) {
+            turtlePenColor(self.specColor[0], self.specColor[1], self.specColor[2]);
+        } else {
+            if (self.end == i) {
+                turtlePenColor(self.specColor[3], self.specColor[4], self.specColor[5]);
+            } else {
+                turtlePenColorAlpha(self.red -> data[i].d, self.green -> data[i].d, self.blue -> data[i].d, self.alpha -> data[i].d);
+                int j = 0;
+                for (; j < self.queue -> length; j += 3) {
+                    if (i == self.queue -> data[j].i) {
+                        turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
+                        break;
+                    }
+                }
+                if (j >= self.queue -> length) {
+                    j = 0;
+                    for (; j < self.completed -> length; j += 3) {
+                        if (i == self.completed -> data[j].i) {
+                            turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
+                            break;
+                        }
+                    }
+                }
+                
+            }
+        }
         turtlePenSize(self.size -> data[i].d * self.screenSize);
         turtleGoto((self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize);
         turtlePenDown();
@@ -355,6 +385,10 @@ void renderGraph(Dijkstra *selfp) { // renders the nodes
         textGLWriteString(self.text -> data[i].s, (self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize, self.size -> data[i].d * 0.6 * self.screenSize, 50);
     }
     // *selfp = self; // no need to restoring
+}
+
+void renderShortestPath(Dijkstra *selfp) {
+    
 }
 
 void renderConnections(Dijkstra *selfp) { // renders the connections between nodes
@@ -366,6 +400,9 @@ void renderConnections(Dijkstra *selfp) { // renders the connections between nod
         turtlePenDown();
         turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
         turtlePenUp();
+    }
+    if (self.finishedDijkstra == 2) {
+        renderShortestPath(&self);
     }
     if (self.selectMode == 4) {
         turtleGoto((self.xpos -> data[self.wireStart].d + self.screenX) * self.screenSize, (self.ypos -> data[self.wireStart].d + self.screenY) * self.screenSize);
@@ -543,6 +580,25 @@ void mouseTick(Dijkstra *selfp) {
                     list_append(self.connections, (unitype) randomDouble(40, 160), 'd');
                 }
             }
+            if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
+                if (self.toggle == 0) {
+                    self.start = self.selected;
+                    self.toggle = 1;
+                } else {
+                    if (self.selected != self.start) {
+                        self.end = self.selected;
+                        self.toggle = 0;
+                        setupDijkstra(&self);
+                    }
+                }
+            }
+            if (self.selected == -1 && fabs(self.focalCSX - self.screenX) < 0.01 && fabs(self.focalCSY - self.screenY) && self.stepNum == 0) {
+                self.toggle = 0;
+                self.start = -1;
+                self.end = -1;
+                list_clear(self.queue);
+                list_clear(self.completed);
+            }
             self.selectMode = 0;
             self.keys[0] = 0;
         }
@@ -572,9 +628,10 @@ void scrollTick(Dijkstra *selfp) {
 
 void hotkeyTick(Dijkstra *selfp) {
     Dijkstra self = *selfp;
-    if (turtleKeyPressed(GLFW_KEY_SPACE)) { // space (dummy)
+    if (turtleKeyPressed(GLFW_KEY_SPACE)) {
         if (self.keys[1] == 0) {
             self.keys[1] = 1;
+            stepDijkstra(&self);
         }
     } else {
         self.keys[1] = 0;
@@ -590,6 +647,10 @@ void hotkeyTick(Dijkstra *selfp) {
     if (turtleKeyPressed(GLFW_KEY_C)) { // C - clear all nodes
         if (self.keys[3] == 0) {
             self.keys[3] = 1;
+            self.start = -1;
+            self.end = -1;
+            self.toggle = 0;
+            self.finishedDijkstra = 0;
             self.selected = -1;
             self.selectMode = 0;
             list_clear(self.xpos);
@@ -602,13 +663,31 @@ void hotkeyTick(Dijkstra *selfp) {
             list_clear(self.blue);
             list_clear(self.alpha);
             list_clear(self.connections);
+            list_clear(self.queue);
+            list_clear(self.completed);
         }
     } else {
         self.keys[3] = 0;
     }
-    if (turtleKeyPressed(GLFW_KEY_X)) {
+    if (turtleKeyPressed(GLFW_KEY_R)) { // R - reset Dijkstra
         if (self.keys[4] == 0) {
             self.keys[4] = 1;
+            self.start = -1;
+            self.end = -1;
+            self.toggle = 0;
+            self.finishedDijkstra = 0;
+            self.selected = -1;
+            self.selectMode = 0;
+            self.stepNum = 0;
+            list_clear(self.queue);
+            list_clear(self.completed);
+        }
+    } else {
+        self.keys[4] = 0;
+    }
+    if (turtleKeyPressed(GLFW_KEY_X)) {
+        if (self.keys[5] == 0) {
+            self.keys[5] = 1;
             if (self.selected != -1) {
                 list_delete(self.xpos, self.selected);
                 list_delete(self.ypos, self.selected);
@@ -643,11 +722,11 @@ void hotkeyTick(Dijkstra *selfp) {
             }
         }
     } else {
-        self.keys[4] = 0;
+        self.keys[5] = 0;
     }
     if (turtleKeyPressed(GLFW_KEY_1)) {
-        if (self.keys[5] == 0) {
-            self.keys[5] = 1;
+        if (self.keys[6] == 0) {
+            self.keys[6] = 1;
             char num[12];
             sprintf(num, "%d", self.xpos -> length);
             self.selected = self.xpos -> length;
@@ -667,11 +746,11 @@ void hotkeyTick(Dijkstra *selfp) {
             self.focalY = self.mouseY - (self.focalCSY + self.screenY) * self.screenSize;
         }
     } else {
-        self.keys[5] = 0;
+        self.keys[6] = 0;
     }
     if (turtleKeyPressed(GLFW_KEY_E)) {
-        if (self.keys[6] == 0) {
-            self.keys[6] = 1;
+        if (self.keys[7] == 0) {
+            self.keys[7] = 1;
             if (self.showDistances) {
                 self.showDistances = 0;
             } else {
@@ -679,11 +758,11 @@ void hotkeyTick(Dijkstra *selfp) {
             }
         }
     } else {
-        self.keys[6] = 0;
+        self.keys[7] = 0;
     }
     if (turtleKeyPressed(GLFW_KEY_D)) {
-        if (self.keys[7] == 0) {
-            self.keys[7] = 1;
+        if (self.keys[8] == 0) {
+            self.keys[8] = 1;
             if (self.changeDistances) {
                 self.changeDistances = 0;
                 for (int i = 0; i < self.connections -> length; i += 3) {
@@ -707,7 +786,7 @@ void hotkeyTick(Dijkstra *selfp) {
             }
         }
     } else {
-        self.keys[7] = 0;
+        self.keys[8] = 0;
     }
     *selfp = self;
 }
