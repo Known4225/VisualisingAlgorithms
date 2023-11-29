@@ -84,7 +84,7 @@ void init(AStar *selfp, int nodeCount) {
         sprintf(num, "%d", i);
         list_append(self.xpos, (unitype) randomDouble(-290, 290), 'd');
         list_append(self.ypos, (unitype) randomDouble(-160, 160), 'd');
-        list_append(self.size, (unitype) randomDouble((100 / (log(nodeCount) + nodeCount * 0.1)), (150 / (log(nodeCount) + nodeCount * 0.1))), 'd');
+        list_append(self.size, (unitype) randomDouble((100 / (log(nodeCount + 1) + nodeCount * 0.1)), (150 / (log(nodeCount + 1) + nodeCount * 0.1))), 'd');
         int tries = 1;
         char colliding = 1;
         while (tries < numTries && colliding) { // ensures no two nodes are colliding with each other
@@ -431,7 +431,7 @@ void renderShortestPath(AStar *selfp) {
     }
     turtleGoto((self.xpos -> data[self.end].d + self.screenX) * self.screenSize, (self.ypos -> data[self.end].d + self.screenY) * self.screenSize); 
     turtlePenColor(self.specColor[12], self.specColor[13], self.specColor[14]);
-    turtlePenSize(8 / (log(self.xpos -> length) + 1) * self.screenSize);
+    turtlePenSize(8 / log(self.xpos -> length + 1) * self.screenSize);
     turtlePenDown();
     int next = self.completed -> data[i + 3].i;
     while (next != -1) {
@@ -449,7 +449,7 @@ void renderShortestPath(AStar *selfp) {
 
 void renderConnections(AStar *selfp) { // renders the connections between nodes
     AStar self = *selfp;
-    turtlePenSize(5 / (log(self.xpos -> length) + 1) * self.screenSize);
+    turtlePenSize(5 / log(self.xpos -> length + 1) * self.screenSize);
     for (int i = 0; i < self.connections -> length; i += 3) {
         turtlePenColor(60, 60, 60);
         int j = 0;
@@ -504,7 +504,7 @@ void renderConnectionLabels(AStar *selfp) { // renders numberic labels for the c
             sprintf(num, "%.0lf", self.connections -> data[i + 2].d);
         }
         turtlePenColor(0, 0, 0);
-        textGLWriteString(num, writeX, writeY, 50 / (log(self.xpos -> length) + self.xpos -> length * 0.1) * self.screenSize, 50);
+        textGLWriteString(num, writeX, writeY, 50 / (log(self.xpos -> length + 1) + self.xpos -> length * 0.1) * self.screenSize, 50);
     }
     *selfp = self; // just for safety
 }
@@ -721,7 +721,7 @@ void hotkeyTick(AStar *selfp) {
     if (turtleKeyPressed(GLFW_KEY_Z)) { // Z - snap to grid
         if (self.keys[2] == 0) {
             self.keys[2] = 1;
-            snapToGrid(&self, (110 / (log(self.xpos -> length) + 1)));
+            snapToGrid(&self, (110 / log(self.xpos -> length + 1)));
         }
     } else {
         self.keys[2] = 0;
@@ -815,7 +815,7 @@ void hotkeyTick(AStar *selfp) {
             self.selectMode = 2;
             list_append(self.xpos, (unitype) (self.mouseX / self.screenSize - self.screenX), 'd');
             list_append(self.ypos, (unitype) (self.mouseY / self.screenSize - self.screenY), 'd');
-            list_append(self.size, (unitype) randomDouble((100 / (log(self.xpos -> length) + self.xpos -> length * 0.1)), (150 / (log(self.xpos -> length) + self.xpos -> length * 0.1))), 'd');
+            list_append(self.size, (unitype) randomDouble((100 / log(150)), (150 / log(150))), 'd');
             list_append(self.shape, (unitype) 0, 'c'); // 0 - circle, 1 - square, 2 - rectangle
             list_append(self.text, (unitype) num, 's');
             list_append(self.red, (unitype) 100.0, 'd');
