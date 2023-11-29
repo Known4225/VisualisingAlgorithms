@@ -47,6 +47,7 @@ typedef struct {
     list_t *heuristic; // heuristic values for nodes
     list_t *completed; // list of completed nodes
     list_t *queue; // priority queue of unconquered nodes
+    list_t *spanConnections; // list of connections in the minimum spanning tree
 } Dijkstra;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
@@ -490,9 +491,32 @@ void renderConnectionLabels(Dijkstra *selfp) { // renders numberic labels for th
             sprintf(num, "%.0lf", self.connections -> data[i + 2].d);
         }
         turtlePenColor(0, 0, 0);
-        textGLWriteString(num, writeX, writeY, 50 / (log(self.xpos -> length + 1) + self.xpos -> length * 0.1) * self.screenSize, 50);
+        textGLWriteString(num, writeX, writeY, self.size -> data[self.connections -> data[i].i].d * 0.6 * self.screenSize, 50);
     }
     *selfp = self; // just for safety
+}
+
+void divideAndConquerMinSpanTree(Dijkstra *selfp, int minDex, int maxDex) { // attempts the divide and conquer method for a minimum spanning tree
+    if (minDex >= maxDex - 1) {
+        // base case
+    } else {
+        divideAndConquerMinSpanTree(selfp, minDex, minDex + (maxDex - minDex) / 2);
+        divideAndConquerMinSpanTree(selfp, minDex + (maxDex - minDex) / 2 + 1, maxDex);
+        list_t *candidates = list_init();
+        for (int i = 0; i < selfp -> connections -> length; i += 3) {
+            if (selfp -> connections -> data[i].i >= minDex && 
+                selfp -> connections -> data[i].i <= minDex + (maxDex - minDex) / 2 && 
+                selfp -> connections -> data[i + 1].i >= minDex + (maxDex - minDex) / 2 + 1 && 
+                selfp -> connections -> data[i + 1].i <= maxDex) {
+                    list_append(candidates, (unitype) i, 'i'); // potential bridge candidate
+            }
+        }
+
+
+
+        list_append(selfp -> spanConnections, (unitype) 1, 'i');
+        list_append(selfp -> spanConnections, (unitype) 2, 'i');
+    }
 }
 
 extern inline double dmod(double a, double modulus) { // always positive mod
@@ -863,6 +887,14 @@ void hotkeyTick(Dijkstra *selfp) {
         }
     } else {
         self.keys[10] = 0;
+    }
+    if (turtleKeyPressed(GLFW_KEY_P)) {
+        if (self.keys[11] == 0) {
+            self.keys[11] = 1;
+            divideAndConquerMinSpanTree(&self, 0, self.xpos -> length);
+        }
+    } else {
+        self.keys[11] = 0;
     }
     *selfp = self;
 }

@@ -449,7 +449,7 @@ void renderShortestPath(AStar *selfp) {
 
 void renderConnections(AStar *selfp) { // renders the connections between nodes
     AStar self = *selfp;
-    turtlePenSize(5 / log(self.xpos -> length + 1) * self.screenSize);
+    turtlePenSize(self.size -> data[self.connections -> data[0].i].d * 0.07 * self.screenSize);
     for (int i = 0; i < self.connections -> length; i += 3) {
         turtlePenColor(60, 60, 60);
         int j = 0;
@@ -504,7 +504,7 @@ void renderConnectionLabels(AStar *selfp) { // renders numberic labels for the c
             sprintf(num, "%.0lf", self.connections -> data[i + 2].d);
         }
         turtlePenColor(0, 0, 0);
-        textGLWriteString(num, writeX, writeY, 50 / (log(self.xpos -> length + 1) + self.xpos -> length * 0.1) * self.screenSize, 50);
+        textGLWriteString(num, writeX, writeY, self.size -> data[self.connections -> data[0].i].d * 0.4 * self.screenSize, 50);
     }
     *selfp = self; // just for safety
 }
