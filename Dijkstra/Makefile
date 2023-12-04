@@ -6,6 +6,8 @@ val:
 	gcc AStar.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -g -Wall -o AStar.o
 span:
 	gcc MinSpanTree.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o MinSpanTree.o
+graph:
+	gcc GenericGraph.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o GenericGraph.o
 clean:
 	rm Dijkstra.o
 	rm AStar.o
