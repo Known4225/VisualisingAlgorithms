@@ -51,7 +51,7 @@ extern inline double randomDouble(double lowerBound, double upperBound) { // ran
 
 void init(Graph_t *selfp, int nodeCount) {
     Graph_t self = *selfp;
-    self.directed = 0;
+    self.directed = 1;
     /* create nodes */
     int numTries = 10000;
     self.xpos = list_init();
@@ -264,7 +264,28 @@ void renderConnections(Graph_t *selfp) { // renders the connections between node
         turtlePenColor(60, 60, 60);
         turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
         turtlePenDown();
-        turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
+        if (self.directed == 1) {
+            double x1 = (self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize;
+            double y1 = (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize;
+            double x2 = (self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize;
+            double y2 = (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize;
+            double theta = atan((y2 - y1) / (x2 - x1));
+            if (x2 > x1) {
+                theta += 3.141592;
+            }
+            x1 = x2 + cos(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
+            y1 = y2 + sin(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
+            turtleGoto(x1, y1);
+            theta += 0.785398; // 45 degrees
+            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+            theta -= 0.785398 * 2;
+            turtlePenUp();
+            turtleGoto(x1, y1);
+            turtlePenDown();
+            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+        } else {
+            turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
+        }
         turtlePenUp();
     }
     if (self.selectMode == 4) {
@@ -612,11 +633,11 @@ void hotkeyTick(Graph_t *selfp) {
     } else {
         self.keys[6] = 0;
     }
-    if (turtleKeyPressed(GLFW_KEY_E)) {
+    if (turtleKeyPressed(GLFW_KEY_E)) { // toggle show distance
         if (self.keys[7] == 0) {
             self.keys[7] = 1;
             if (self.showDistances) {
-                self.showDistances = 1;
+                self.showDistances = 0;
             } else {
                 self.showDistances = 1;
             }

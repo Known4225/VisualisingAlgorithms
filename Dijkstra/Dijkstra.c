@@ -820,7 +820,7 @@ void hotkeyTick(Dijkstra *selfp) {
         if (self.keys[7] == 0) {
             self.keys[7] = 1;
             if (self.showDistances) {
-                self.showDistances = 1;
+                self.showDistances = 0;
             } else {
                 self.showDistances = 1;
             }
