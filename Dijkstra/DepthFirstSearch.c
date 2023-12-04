@@ -2,9 +2,7 @@
 #include <time.h>
 
 /*
-This is a modification of the VanDeGraaph Generator to apply pathfinding algorithms
-It's essentially a more polished version of the AStar program
-It also has heuristic capabilities
+This is for generic graph projects
 */
 
 typedef struct {
@@ -14,10 +12,6 @@ typedef struct {
     list_t *size;
     list_t *shape;
     list_t *text;
-    list_t *red; // colour
-    list_t *green;
-    list_t *blue;
-    list_t *alpha;
     double screenX;
     double screenY;
     double screenSize;
@@ -37,17 +31,18 @@ typedef struct {
     int wireStart;
     int wireEnd;
     list_t *connections; // AoS - node1, node2, distance
+    list_t *adjacentcyList; // alternate representation of graph, contains a list of lists of integers
 
-    /* AStar stuff */
-    char toggle;
-    char finishedAStar;
+    /* DFS stuff */
+    char directed; // 0 - undirected, 1 - directed
+    char completedDFS;
+    int current; // currently selected node
     int stepNum;
-    int start; // start and end nodes for AStar's algorithm
-    int end;
-    list_t *heuristic; // heuristic values for nodes
-    list_t *completed; // list of completed nodes
-    list_t *queue; // priority queue of unconquered nodes
-} AStar;
+    int start; // start and end nodes for Graph_t's algorithm
+    list_t *visited;
+    list_t *completed;
+    list_t *backstack;
+} Graph_t;
 
 extern inline int randomInt(int lowerBound, int upperBound) { // random integer between lower and upper bound (inclusive)
     return (rand() % (upperBound - lowerBound + 1) + lowerBound);
@@ -57,17 +52,9 @@ extern inline double randomDouble(double lowerBound, double upperBound) { // ran
     return (rand() * (upperBound - lowerBound) / RAND_MAX + lowerBound); // probably works idk
 }
 
-double heuristic(AStar *selfp, int node1, int node2) { // a simple distance heuristic
-    AStar self = *selfp;
-    double x = self.xpos -> data[node1].d - self.xpos -> data[node2].d;
-    double y = self.ypos -> data[node1].d - self.ypos -> data[node2].d;
-    // return 0.0;
-    return sqrt(x * x + y * y);
-}
-
-void init(AStar *selfp, int nodeCount) {
-    AStar self = *selfp;
-
+void init(Graph_t *selfp, int nodeCount) {
+    Graph_t self = *selfp;
+    self.directed = 0;
     /* create nodes */
     int numTries = 10000;
     self.xpos = list_init();
@@ -75,16 +62,17 @@ void init(AStar *selfp, int nodeCount) {
     self.size = list_init();
     self.shape = list_init();
     self.text = list_init();
-    self.red = list_init();
-    self.green = list_init();
-    self.blue = list_init();
-    self.alpha = list_init();
+    self.adjacentcyList = list_init();
+    self.visited = list_init();
+    self.completed = list_init();
+    self.backstack = list_init();
     for (int i = 0; i < nodeCount; i++) {
         char num[12];
         sprintf(num, "%d", i);
         list_append(self.xpos, (unitype) randomDouble(-290, 290), 'd');
         list_append(self.ypos, (unitype) randomDouble(-160, 160), 'd');
         list_append(self.size, (unitype) randomDouble((100 / (log(nodeCount + 1) + nodeCount * 0.1)), (150 / (log(nodeCount + 1) + nodeCount * 0.1))), 'd');
+        list_append(self.adjacentcyList, (unitype) list_init(), 'r');
         int tries = 1;
         char colliding = 1;
         while (tries < numTries && colliding) { // ensures no two nodes are colliding with each other
@@ -111,10 +99,6 @@ void init(AStar *selfp, int nodeCount) {
         }
         list_append(self.shape, (unitype) 0, 'c'); // 0 - circle, 1 - square, 2 - rectangle
         list_append(self.text, (unitype) num, 's');
-        list_append(self.red, (unitype) 100.0, 'd');
-        list_append(self.green, (unitype) 100.0, 'd');
-        list_append(self.blue, (unitype) 100.0, 'd');
-        list_append(self.alpha, (unitype) 0.0, 'd');
     }
 
     /* create connections */
@@ -122,7 +106,7 @@ void init(AStar *selfp, int nodeCount) {
     self.connections = list_init();
     for (int totalTries = 0; totalTries < nodeCount * nodeCount / 4; totalTries++) { // the total number of attempted connections is nodeCount squared upon 4
         int i = randomInt(0, nodeCount - 1); // this works by randomly generating pairs and putting a connection between them (if eligible)
-        //int j = randomInt(0, nodeCount - 1); // since connections made earlier take precedent over those made later, this made it more spread between nodes (otherwise 0 would get all the connections it could which robs other nodes)
+        // int j = randomInt(0, nodeCount - 1); // since connections made earlier take precedent over those made later, this made it more spread between nodes (otherwise 0 would get all the connections it could which robs other nodes)
         // this all works great, but the last thing I would like to do is to prefer connections between nodes that are closer since this will generate more human looking graphs, so instead of chosing two nodes randomly I'll choose one node randomly and choose the second node with a distance heuristic
         list_clear(rankedDistances);
         int min;
@@ -167,10 +151,18 @@ void init(AStar *selfp, int nodeCount) {
             double slope1 = (y1 - y2) / (x1 - x2);
             double ycept1 = -slope1 * x1 + y1;
             for (int k = 0; k < self.connections -> length; k += 3) {
-                if ((self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) || (self.connections -> data[k].i == j && self.connections -> data[k + 1].i == i)) { // check if the connection has already been made to avoid duplicate connections
-                    eligible = 1;
-                    // printf("error: duplicate %d to %d\n", i, j);
-                    break;
+                if (self.directed) {
+                    if (self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) { // check if the connection has already been made to avoid duplicate connections
+                        eligible = 1;
+                        // printf("error: duplicate %d to %d\n", i, j);
+                        break;
+                    }
+                } else {
+                    if ((self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) || (self.connections -> data[k].i == j && self.connections -> data[k + 1].i == i)) { // check if the connection has already been made to avoid duplicate connections
+                        eligible = 1;
+                        // printf("error: duplicate %d to %d\n", i, j);
+                        break;
+                    }
                 }
                 double x3, y3, x4, y4;
                 if (self.xpos -> data[self.connections -> data[k].i].d > self.xpos -> data[self.connections -> data[k + 1].i].d) { // ensures x3, y3 is the leftmost pair
@@ -196,7 +188,22 @@ void init(AStar *selfp, int nodeCount) {
             if (!eligible) {
                 list_append(self.connections, (unitype) i, 'i'); // adds i and j after, signifying that they are connected
                 list_append(self.connections, (unitype) j, 'i');
-                list_append(self.connections, (unitype) randomDouble(4, 16), 'd'); // distance (weight value)
+                if (self.directed) {
+                    for (int h = 0; h < self.connections -> length; h += 3) {
+                        if (self.connections -> data[h].i == j && self.connections -> data[h + 1].i == i) {
+                            list_append(self.connections, self.connections -> data[h + 2], 'd');
+                            eligible = 1;
+                            break;
+                        }
+                    }
+                }
+                if (!eligible) {
+                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd'); // distance (weight value)
+                }
+                list_append(self.adjacentcyList -> data[i].r, (unitype) j, 'i'); // update adjacentcy list
+                if (self.directed == 0) {
+                    list_append(self.adjacentcyList -> data[j].r, (unitype) i, 'i'); // if not directed then do both
+                }
             }
         }
     }
@@ -225,157 +232,80 @@ void init(AStar *selfp, int nodeCount) {
     self.wireStart = -1;
     self.showDistances = 1;
     self.changeDistances = 0;
+    self.completedDFS = 0;
 
-    /* AStar */
+    /* Graph_t */
     self.start = -1;
-    self.end = -1;
-    self.finishedAStar = 0;
-    self.toggle = 0;
     self.stepNum = 0;
-    self.completed = list_init();
-    self.queue = list_init();
     *selfp = self;
 }
 
-void setupAStar(AStar *selfp) {
-    AStar self = *selfp;
-    self.heuristic = list_init();
-    for (int i = 0; i < self.xpos -> length; i++) { // load heuristic values
-        list_append(self.heuristic, (unitype) heuristic(&self, i, self.end), 'd');
-    }
-    if (self.start != -1 && self.end != -1) {
-        self.stepNum = 0;
-        self.finishedAStar = 0;
-        list_clear(self.completed);
-        list_clear(self.queue);
-        list_append(self.queue, (unitype) self.start, 'i'); // node ID
-        list_append(self.queue, (unitype) 0.0, 'd'); // shortest known distance from start
-        list_append(self.queue, (unitype) (0.0 + self.heuristic -> data[self.start].d), 'd'); // path distance + heuristic
-        list_append(self.queue, (unitype) -1, 'i'); // previous node ID for shortest path
+void setupDepth(Graph_t *selfp) {
+    Graph_t self = *selfp;
+    if (self.start != -1) {
+        self.completedDFS = 0;
+        self.stepNum = 1;
+        list_append(self.backstack, (unitype) self.start, 'i'); // add to call stack
+        self.current = self.start;
     }
     *selfp = self;
 }
 
-void stepAStar(AStar *selfp) {
-    AStar self = *selfp;
-    if (self.finishedAStar) {
-        self.finishedAStar = 2;
-    }
-    if (self.queue -> length > 0 && !self.finishedAStar) {
+void stepDepth(Graph_t *selfp) {
+    Graph_t self = *selfp;
+    if (self.stepNum > 0 && self.completedDFS == 0) {
+        self.current = self.backstack -> data[self.backstack -> length - 1].i;
         self.stepNum += 1;
-        int head = self.queue -> data[0].i; // next up in queue
-        list_t *headNeighbors = list_init();
-        for (int i = 0; i < self.connections -> length; i += 3) {
-            if (self.connections -> data[i].i == head) {
-                list_append(headNeighbors, self.connections -> data[i + 1], 'i');
-                if (self.changeDistances) {
-                    list_append(headNeighbors, (unitype) (self.connections -> data[i + 2].d * sqrt((self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) * 
-                                                                                                  (self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) + 
-                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d) * 
-                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d))), 'd');
-                } else {
-                    list_append(headNeighbors, self.connections -> data[i + 2], 'd');
+        list_print(self.backstack);
+        printf("step %d\n", self.current);
+        for (int i = 0; i < self.visited -> length; i++) {
+            if (self.visited -> data[i].i == self.current) {
+                if (self.backstack -> length > 0) {
+                    printf("removed %d\n", self.backstack -> data[self.backstack -> length - 1].i);
+                    list_append(self.completed, self.backstack -> data[self.backstack -> length - 1], 'i');
+                    list_pop(self.backstack); // remove from call stack
                 }
+                if (self.backstack -> length == 0) {
+                    printf("completed\n");
+                    self.completedDFS = 1;
+                }
+                *selfp = self;
+                return;
             }
-            if (self.connections -> data[i + 1].i == head) {
-                list_append(headNeighbors, self.connections -> data[i], 'i');
-                if (self.changeDistances) {
-                    list_append(headNeighbors, (unitype) (self.connections -> data[i + 2].d * sqrt((self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) * 
-                                                                                                  (self.xpos -> data[self.connections -> data[i].i].d - self.xpos -> data[self.connections -> data[i + 1].i].d) + 
-                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d) * 
-                                                                                                  (self.ypos -> data[self.connections -> data[i].i].d - self.ypos -> data[self.connections -> data[i + 1].i].d))), 'd');
-                } else {
-                    list_append(headNeighbors, self.connections -> data[i + 2], 'd');
-                }
-            } 
         }
-        for (int i = 0; i < headNeighbors -> length; i += 2) {
-            int visited = 0;
-            for (int j = 0; j < self.queue -> length; j += 4) { // check if in queue
-                if (self.queue -> data[j].i == headNeighbors -> data[i].i) {
-                    visited = j;
+        
+        list_append(self.visited, (unitype) self.current, 'i'); // add current node to visited
+        for (int i = 0; i < self.adjacentcyList -> data[self.current].r -> length; i++) {
+            char found = 0;
+            for (int j = 0; j < self.visited -> length; j++) {
+                if (self.visited -> data[j].i == self.adjacentcyList -> data[self.current].r -> data[i].i) {
+                    found = 1;
                     break;
                 }
             }
-            if (visited) { // is in queue
-                double h = self.heuristic -> data[headNeighbors -> data[i].i].d;
-                if (self.queue -> data[1].d + headNeighbors -> data[i + 1].d < self.queue -> data[visited + 1].d) { // if new path is shorter than old path
-                    self.queue -> data[visited + 1] = (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d);
-                    self.queue -> data[visited + 2] = (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d + h);
-                    self.queue -> data[visited + 3] = self.queue -> data[0];
-                    int j = visited + 1;
-                    while (j > 5 && self.queue -> data[j + 1].d < self.queue -> data[j - 3].d) { // swap adjacents (based on path distance + heuristic)
-                        unitype temp1 = self.queue -> data[j - 1];
-                        unitype temp2 = self.queue -> data[j];
-                        unitype temp3 = self.queue -> data[j + 1];
-                        unitype temp4 = self.queue -> data[j + 2];
-                        self.queue -> data[j - 1] = self.queue -> data[j - 5];
-                        self.queue -> data[j] = self.queue -> data[j - 4];
-                        self.queue -> data[j + 1] = self.queue -> data[j - 3];
-                        self.queue -> data[j + 2] = self.queue -> data[j - 2];
-                        self.queue -> data[j - 5] = temp1;
-                        self.queue -> data[j - 4] = temp2;
-                        self.queue -> data[j - 3] = temp3;
-                        self.queue -> data[j - 2] = temp4;
-                        j -= 4;
-                    }
-                }
-            } else {
-                for (int j = 0; j < self.completed -> length; j += 4) { // check if in completed
-                    if (self.completed -> data[j].i == headNeighbors -> data[i].i) {
-                        visited = 1;
-                        break;
-                    }
-                }
-                if (!visited) { // is not in queue or completed lists
-                    double h = self.heuristic -> data[headNeighbors -> data[i].i].d;
-                    list_append(self.queue, (unitype) headNeighbors -> data[i].i, 'i');
-                    list_append(self.queue, (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d), 'd');
-                    list_append(self.queue, (unitype) (self.queue -> data[1].d + headNeighbors -> data[i + 1].d + h), 'd');
-                    list_append(self.queue, (unitype) self.queue -> data[0].i, 'i');
-                    int j = self.queue -> length - 3;
-                    while (j > 5 && self.queue -> data[j + 1].d < self.queue -> data[j - 3].d) { // swap adjacents (based on path distance + heuristic)
-                        unitype temp1 = self.queue -> data[j - 1];
-                        unitype temp2 = self.queue -> data[j];
-                        unitype temp3 = self.queue -> data[j + 1];
-                        unitype temp4 = self.queue -> data[j + 2];
-                        self.queue -> data[j - 1] = self.queue -> data[j - 5];
-                        self.queue -> data[j] = self.queue -> data[j - 4];
-                        self.queue -> data[j + 1] = self.queue -> data[j - 3];
-                        self.queue -> data[j + 2] = self.queue -> data[j - 2];
-                        self.queue -> data[j - 5] = temp1;
-                        self.queue -> data[j - 4] = temp2;
-                        self.queue -> data[j - 3] = temp3;
-                        self.queue -> data[j - 2] = temp4;
-                        j -= 4;
-                    }
-                }
-            }
-        }
-        list_append(self.completed, self.queue -> data[0], 'i');
-        list_append(self.completed, self.queue -> data[1], 'd');
-        list_append(self.completed, self.queue -> data[2], 'd');
-        list_append(self.completed, self.queue -> data[3], 'i');
-        list_delete(self.queue, 0);
-        list_delete(self.queue, 0);
-        list_delete(self.queue, 0);
-        list_delete(self.queue, 0);
-        if (self.queue -> length == 0 || self.completed -> data[self.completed -> length - 4].i == self.end) {
-            if (self.completed -> data[self.completed -> length - 4].i != self.end) {
-                //printf("no path found\n");
-            }
-            //printf("finished!\n");
-            self.finishedAStar = 1;
-        } else {
-            //printf("stepped!\n");
+            if (!found)
+                list_append(self.backstack, (unitype) self.adjacentcyList -> data[self.current].r -> data[i].i, 'i'); // add to call stack
         }
     }
     *selfp = self;
 }
 
-void renderGraph(AStar *selfp) { // renders the nodes
-    AStar self = *selfp;
+void renderGraph(Graph_t *selfp) { // renders the nodes
+    Graph_t self = *selfp;
     for (int i = self.xpos -> length - 1; i > -1; i--) {
+        switch (self.shape -> data[i].c) {
+            case 0:
+            turtlePenShape("circle");
+            break;
+            case 1:
+            turtlePenShape("square");
+            break;
+            case 2:
+            turtlePenShape("square");
+            break;
+            default:
+            turtlePenShape("circle");
+        }
         if (self.selected == i) {
             turtleGoto((self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize);
             turtlePenColor(120, 120, 120);
@@ -386,26 +316,18 @@ void renderGraph(AStar *selfp) { // renders the nodes
         if (self.start == i) {
             turtlePenColor(self.specColor[0], self.specColor[1], self.specColor[2]);
         } else {
-            if (self.end == i) {
-                turtlePenColor(self.specColor[3], self.specColor[4], self.specColor[5]);
-            } else {
-                turtlePenColorAlpha(self.red -> data[i].d, self.green -> data[i].d, self.blue -> data[i].d, self.alpha -> data[i].d);
-                int j = 0;
-                for (; j < self.queue -> length; j += 4) {
-                    if (i == self.queue -> data[j].i) {
-                        turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
-                        break;
-                    }
-                }
-                if (j >= self.queue -> length) {
-                    j = 0;
-                    for (; j < self.completed -> length; j += 4) {
-                        if (i == self.completed -> data[j].i) {
-                            turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
-                            break;
-                        }
-                    }
-                }
+            turtlePenColor(100.0, 100.0, 100.0);
+        }
+        for (int j = 0; j < self.visited -> length; j += 1) {
+            if (i == self.visited -> data[j].i) {
+                turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
+                break;
+            }
+        }
+        for (int j = 0; j < self.completed -> length; j += 1) {
+            if (i == self.completed -> data[j].i) {
+                turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
+                break;
             }
         }
         turtlePenSize(self.size -> data[i].d * self.screenSize);
@@ -415,66 +337,46 @@ void renderGraph(AStar *selfp) { // renders the nodes
         turtlePenColor(30, 30, 30);
         textGLWriteString(self.text -> data[i].s, (self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize, self.size -> data[i].d * 0.6 * self.screenSize, 50);
     }
+    turtlePenShape("circle");
     // *selfp = self; // no need to restoring
 }
 
-void renderShortestPath(AStar *selfp) {
-    AStar self = *selfp;
-    int i = self.completed -> length - 4;
-    for (; i > -1; i -= 4) { // find end (should be the last one in the completed list but shit happens)
-        if (self.completed -> data[i].i == self.end) {
-            break;
-        }
-    }
-    if (i < 0) {
-        return; // no path exists
-    }
-    turtleGoto((self.xpos -> data[self.end].d + self.screenX) * self.screenSize, (self.ypos -> data[self.end].d + self.screenY) * self.screenSize); 
-    turtlePenColor(self.specColor[12], self.specColor[13], self.specColor[14]);
-    turtlePenSize(8 / log(self.xpos -> length + 1) * self.screenSize);
-    turtlePenDown();
-    int next = self.completed -> data[i + 3].i;
-    while (next != -1) {
-        turtleGoto((self.xpos -> data[next].d + self.screenX) * self.screenSize, (self.ypos -> data[next].d + self.screenY) * self.screenSize);
-        for (int j = 0; j < self.completed -> length; j += 4) {
-            if (self.completed -> data[j].i == next) { // should always find a match
-                next = self.completed -> data[j + 3].i;
-                break;
-            }
-        }
-    }
-    turtlePenUp();
-    *selfp = self; // just for safety
-}
-
-void renderConnections(AStar *selfp) { // renders the connections between nodes
-    AStar self = *selfp;
+void renderConnections(Graph_t *selfp) { // renders the connections between nodes
+    Graph_t self = *selfp;
     turtlePenSize(self.size -> data[self.connections -> data[0].i].d * 0.07 * self.screenSize);
     for (int i = 0; i < self.connections -> length; i += 3) {
         turtlePenColor(60, 60, 60);
-        int j = 0;
-        for (; j < self.queue -> length; j += 4) {
-            if ((self.connections -> data[i].i == self.queue -> data[j].i && self.connections -> data[i + 1].i == self.queue -> data[j + 3].i) || (self.connections -> data[i + 1].i == self.queue -> data[j].i && self.connections -> data[i].i == self.queue -> data[j + 3].i)) {
-                turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
-                break;
-            }
+        if (list_count(self.visited, (unitype) self.connections -> data[i].i, 'i') && list_count(self.visited, (unitype) self.connections -> data[i + 1].i, 'i')) {
+            turtlePenColor(self.specColor[6], self.specColor[7], self.specColor[8]);
         }
-        if (j >= self.queue -> length) {
-            j = 0;
-            for (; j < self.completed -> length; j += 4) {
-                if ((self.connections -> data[i].i == self.completed -> data[j].i && self.connections -> data[i + 1].i == self.completed -> data[j + 3].i) || (self.connections -> data[i + 1].i == self.completed -> data[j].i && self.connections -> data[i].i == self.completed -> data[j + 3].i)) {
-                    turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
-                    break;
-                }
-            }
+        if (list_count(self.completed, (unitype) self.connections -> data[i].i, 'i') && list_count(self.completed, (unitype) self.connections -> data[i + 1].i, 'i')) {
+            turtlePenColor(self.specColor[9], self.specColor[10], self.specColor[11]);
         }
         turtleGoto((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize);
         turtlePenDown();
-        turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
+        if (self.directed == 1) {
+            double x1 = (self.xpos -> data[self.connections -> data[i].i].d + self.screenX) * self.screenSize;
+            double y1 = (self.ypos -> data[self.connections -> data[i].i].d + self.screenY) * self.screenSize;
+            double x2 = (self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize;
+            double y2 = (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize;
+            double theta = atan((y2 - y1) / (x2 - x1));
+            if (x2 > x1) {
+                theta += 3.141592;
+            }
+            x1 = x2 + cos(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
+            y1 = y2 + sin(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
+            turtleGoto(x1, y1);
+            theta += 0.785398; // 45 degrees
+            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+            theta -= 0.785398 * 2;
+            turtlePenUp();
+            turtleGoto(x1, y1);
+            turtlePenDown();
+            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+        } else {
+            turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
+        }
         turtlePenUp();
-    }
-    if (self.finishedAStar == 2) {
-        renderShortestPath(&self);
     }
     if (self.selectMode == 4) {
         turtleGoto((self.xpos -> data[self.wireStart].d + self.screenX) * self.screenSize, (self.ypos -> data[self.wireStart].d + self.screenY) * self.screenSize);
@@ -489,8 +391,8 @@ void renderConnections(AStar *selfp) { // renders the connections between nodes
     *selfp = self;
 }
 
-void renderConnectionLabels(AStar *selfp) { // renders numberic labels for the connections
-    AStar self = *selfp;
+void renderConnectionLabels(Graph_t *selfp) { // renders numberic labels for the connections
+    Graph_t self = *selfp;
     for (int i = 0; i < self.connections -> length; i += 3) {
         double writeX = ((self.xpos -> data[self.connections -> data[i].i].d + self.screenX) + (self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX)) / 2 * self.screenSize ;
         double writeY = ((self.ypos -> data[self.connections -> data[i].i].d + self.screenY) + (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY)) / 2 * self.screenSize;
@@ -517,8 +419,8 @@ extern inline double dmod(double a, double modulus) { // always positive mod
     return out;
 }
 
-void snapToGrid(AStar *selfp, double gridSize) { // the classic n^2 snap to grid algorithm, one day I'm going to solve this in O(n) you just wait, and it will be coke milk
-    AStar self = *selfp;
+void snapToGrid(Graph_t *selfp, double gridSize) { // the classic n^2 snap to grid algorithm, one day I'm going to solve this in O(n) you just wait, and it will be coke milk
+    Graph_t self = *selfp;
     int modMedX = 0;
     int modMedY = 0;
     double minDistX = 1000000000.0;
@@ -567,8 +469,8 @@ void snapToGrid(AStar *selfp, double gridSize) { // the classic n^2 snap to grid
     *selfp = self;
 }
  
-void mouseTick(AStar *selfp) {
-    AStar self = *selfp;
+void mouseTick(Graph_t *selfp) {
+    Graph_t self = *selfp;
     turtleGetMouseCoords(); // get the mouse coordinates (turtle.mouseX, turtle.mouseY)
     self.mouseX = turtle.mouseX;
     self.mouseY = turtle.mouseY;
@@ -638,41 +540,48 @@ void mouseTick(AStar *selfp) {
             if (self.selectMode == 4 && self.wireStart != -1 && self.wireEnd != -1) {
                 char found = 0;
                 for (int i = 0; i < self.connections -> length; i += 3) {
-                    if ((self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) || (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd)) {
-                        list_delete(self.connections, i);
-                        list_delete(self.connections, i);
-                        list_delete(self.connections, i);
-                        found = 1;
-                        break;
+                    if (self.directed) {
+                        if (self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) {
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            found = 1;
+                            break;
+                        }
+                    } else {
+                        if ((self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) || (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd)) {
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            found = 1;
+                            break;
+                        }
                     }
                 }
                 if (!found) {
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
-                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
-                }
-            }
-            if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
-                if (self.toggle == 0) {
-                    list_clear(self.queue);
-                    list_clear(self.completed);
-                    self.start = self.selected;
-                    self.end = -1;
-                    self.toggle = 1;
-                } else {
-                    if (self.selected != self.start) {
-                        self.end = self.selected;
-                        self.toggle = 0;
-                        setupAStar(&self);
+                    if (self.directed) {
+                        for (int i = 0; i < self.connections -> length; i += 3) {
+                            if (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd) {
+                                list_append(self.connections, self.connections -> data[i + 2], 'd');
+                                found = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
+                    }
+                    list_append(self.adjacentcyList -> data[self.wireStart].r, (unitype) self.wireEnd, 'i'); // update adjacentcy list
+                    if (self.directed == 0) {
+                        list_append(self.adjacentcyList -> data[self.wireEnd].r, (unitype) self.wireStart, 'i'); // if not directed then do both
                     }
                 }
             }
-            if (self.selected == -1 && fabs(self.focalCSX - self.screenX) < 0.01 && fabs(self.focalCSY - self.screenY) && self.stepNum == 0) {
-                self.toggle = 0;
-                self.start = -1;
-                self.end = -1;
-                list_clear(self.queue);
-                list_clear(self.completed);
+            if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
+                self.start = self.selected;
+                setupDepth(&self);
             }
             self.selectMode = 0;
             self.keys[0] = 0;
@@ -685,8 +594,8 @@ void mouseTick(AStar *selfp) {
     *selfp = self;
 }
 
-void scrollTick(AStar *selfp) {
-    AStar self = *selfp;
+void scrollTick(Graph_t *selfp) {
+    Graph_t self = *selfp;
     double mouseWheel = turtleMouseWheel(); // behavior is a bit different for the scroll wheel
     if (mouseWheel > 0) {
         self.screenX -= (turtle.mouseX * (-1 / self.scrollSpeed + 1)) / self.screenSize;
@@ -701,12 +610,12 @@ void scrollTick(AStar *selfp) {
     *selfp = self;
 }
 
-void hotkeyTick(AStar *selfp) {
-    AStar self = *selfp;
+void hotkeyTick(Graph_t *selfp) {
+    Graph_t self = *selfp;
     if (turtleKeyPressed(GLFW_KEY_SPACE)) {
         if (self.keys[1] == 0) {
             self.keys[1] = 1;
-            stepAStar(&self);
+            stepDepth(&self);
         } else {
             self.keys[9] += 1;
             if (self.keys[9] > 30) {
@@ -730,39 +639,34 @@ void hotkeyTick(AStar *selfp) {
         if (self.keys[3] == 0) {
             self.keys[3] = 1;
             self.start = -1;
-            self.end = -1;
-            self.toggle = 0;
-            self.finishedAStar = 0;
             self.selected = -1;
             self.selectMode = 0;
+            self.completedDFS = 0;
             list_clear(self.xpos);
             list_clear(self.ypos);
             list_clear(self.size);
             list_clear(self.shape);
             list_clear(self.text);
-            list_clear(self.red);
-            list_clear(self.green);
-            list_clear(self.blue);
-            list_clear(self.alpha);
             list_clear(self.connections);
-            list_clear(self.queue);
+            list_clear(self.adjacentcyList);
+            list_clear(self.visited);
             list_clear(self.completed);
+            list_clear(self.backstack);
         }
     } else {
         self.keys[3] = 0;
     }
-    if (turtleKeyPressed(GLFW_KEY_R)) { // R - reset AStar
+    if (turtleKeyPressed(GLFW_KEY_R)) { // R - reset Graph_t
         if (self.keys[4] == 0) {
+            list_clear(self.visited);
+            list_clear(self.completed);
+            list_clear(self.backstack);
+            self.completedDFS = 0;
             self.keys[4] = 1;
             self.start = -1;
-            self.end = -1;
-            self.toggle = 0;
-            self.finishedAStar = 0;
             self.selected = -1;
             self.selectMode = 0;
             self.stepNum = 0;
-            list_clear(self.queue);
-            list_clear(self.completed);
         }
     } else {
         self.keys[4] = 0;
@@ -776,10 +680,6 @@ void hotkeyTick(AStar *selfp) {
                 list_delete(self.size, self.selected);
                 list_delete(self.shape, self.selected);
                 list_delete(self.text, self.selected);
-                list_delete(self.red, self.selected);
-                list_delete(self.green, self.selected);
-                list_delete(self.blue, self.selected);
-                list_delete(self.alpha, self.selected);
                 for (int i = 0; i < self.connections -> length; i += 3) {
                     if (self.connections -> data[i].i == self.selected || self.connections -> data[i + 1].i == self.selected) {
                         list_delete(self.connections, i);
@@ -795,6 +695,14 @@ void hotkeyTick(AStar *selfp) {
                         }
                     }
                 }
+                for (int i = 0; i < self.adjacentcyList -> length; i++) {
+                    for (int j = 0; j < self.adjacentcyList -> data[i].r -> length; j++) {
+                        if (self.adjacentcyList -> data[i].r -> data[j].i > self.selected) {
+                            self.adjacentcyList -> data[i].r -> data[j].i -= 1;
+                        }
+                    }
+                }
+                list_delete(self.adjacentcyList, self.selected);
                 for (int i = self.selected; i < self.xpos -> length; i++) {
                     char num[12];
                     sprintf(num, "%d", i);
@@ -802,6 +710,7 @@ void hotkeyTick(AStar *selfp) {
                 }
                 self.selected = -1;
             }
+            list_print(self.adjacentcyList);
         }
     } else {
         self.keys[5] = 0;
@@ -818,10 +727,7 @@ void hotkeyTick(AStar *selfp) {
             list_append(self.size, (unitype) randomDouble((100 / log(150)), (150 / log(150))), 'd');
             list_append(self.shape, (unitype) 0, 'c'); // 0 - circle, 1 - square, 2 - rectangle
             list_append(self.text, (unitype) num, 's');
-            list_append(self.red, (unitype) 100.0, 'd');
-            list_append(self.green, (unitype) 100.0, 'd');
-            list_append(self.blue, (unitype) 100.0, 'd');
-            list_append(self.alpha, (unitype) 0.0, 'd');
+            list_append(self.adjacentcyList, (unitype) list_init(), 'r');
             self.focalCSX = self.xpos -> data[self.selected].d;
             self.focalCSY = self.ypos -> data[self.selected].d;
             self.focalX = self.mouseX - (self.focalCSX + self.screenX) * self.screenSize;
@@ -830,7 +736,7 @@ void hotkeyTick(AStar *selfp) {
     } else {
         self.keys[6] = 0;
     }
-    if (turtleKeyPressed(GLFW_KEY_E)) {
+    if (turtleKeyPressed(GLFW_KEY_E)) { // toggle show distance
         if (self.keys[7] == 0) {
             self.keys[7] = 1;
             if (self.showDistances) {
@@ -890,7 +796,7 @@ int main(int argc, char *argv[]) {
     glfwWindowHint(GLFW_SAMPLES, 4); // MSAA (Anti-Aliasing) with 4 samples (must be done before window is created (?))
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(1280, 720, "AStar", NULL, NULL);
+    window = glfwCreateWindow(1280, 720, "Depth First Search", NULL, NULL);
     if (!window) {
         glfwTerminate();
     }
@@ -906,7 +812,7 @@ int main(int argc, char *argv[]) {
     clock_t start, end;
 
     turtleBgColor(50, 50, 50);
-    AStar obj; // principle object
+    Graph_t obj; // principle object
     srand(time(NULL)); // randomiser init seed
     if (argc == 1) {
         init(&obj, 20);

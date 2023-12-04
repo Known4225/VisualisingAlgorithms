@@ -606,6 +606,7 @@ void hotkeyTick(Graph_t *selfp) {
             list_clear(self.shape);
             list_clear(self.text);
             list_clear(self.connections);
+            list_clear(self.adjacentcyList);
         }
     } else {
         self.keys[3] = 0;
@@ -626,7 +627,7 @@ void hotkeyTick(Graph_t *selfp) {
     if (turtleKeyPressed(GLFW_KEY_X)) {
         if (self.keys[5] == 0) {
             self.keys[5] = 1;
-            if (self.selected != -1) {
+            if (self.selected != -1 && self.stepNum == 0) {
                 list_delete(self.xpos, self.selected);
                 list_delete(self.ypos, self.selected);
                 list_delete(self.size, self.selected);

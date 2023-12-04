@@ -8,6 +8,10 @@ span:
 	gcc MinSpanTree.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o MinSpanTree.o
 graph:
 	gcc GenericGraph.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o GenericGraph.o
+depth:
+	gcc DepthFirstSearch.c -L./Linux -lglfw3 -ldl -lm -lX11 -lglad -lGL -lGLU -lpthread -O3 -o DepthFirstSearch.o
 clean:
 	rm Dijkstra.o
 	rm AStar.o
+	rm MinSpanTree.o
+	rm GenericGraph.o

@@ -161,7 +161,8 @@ void list_clear(list_t *list) {
     list -> data = calloc(1, sizeof(unitype));
 }
 
-unitype list_pop(list_t *list) { // pops the last item of the list off and returns it
+/* pops the last item of the list off and returns it */
+unitype list_pop(list_t *list) {
     if (list -> length > 0) {
         list -> length -= 1;
         unitype ret = list -> data[list -> length];
