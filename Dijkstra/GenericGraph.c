@@ -145,10 +145,18 @@ void init(Graph_t *selfp, int nodeCount) {
             double slope1 = (y1 - y2) / (x1 - x2);
             double ycept1 = -slope1 * x1 + y1;
             for (int k = 0; k < self.connections -> length; k += 3) {
-                if ((self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) || (self.connections -> data[k].i == j && self.connections -> data[k + 1].i == i)) { // check if the connection has already been made to avoid duplicate connections
-                    eligible = 1;
-                    // printf("error: duplicate %d to %d\n", i, j);
-                    break;
+                if (self.directed) {
+                    if (self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) { // check if the connection has already been made to avoid duplicate connections
+                        eligible = 1;
+                        // printf("error: duplicate %d to %d\n", i, j);
+                        break;
+                    }
+                } else {
+                    if ((self.connections -> data[k].i == i && self.connections -> data[k + 1].i == j) || (self.connections -> data[k].i == j && self.connections -> data[k + 1].i == i)) { // check if the connection has already been made to avoid duplicate connections
+                        eligible = 1;
+                        // printf("error: duplicate %d to %d\n", i, j);
+                        break;
+                    }
                 }
                 double x3, y3, x4, y4;
                 if (self.xpos -> data[self.connections -> data[k].i].d > self.xpos -> data[self.connections -> data[k + 1].i].d) { // ensures x3, y3 is the leftmost pair
@@ -174,7 +182,18 @@ void init(Graph_t *selfp, int nodeCount) {
             if (!eligible) {
                 list_append(self.connections, (unitype) i, 'i'); // adds i and j after, signifying that they are connected
                 list_append(self.connections, (unitype) j, 'i');
-                list_append(self.connections, (unitype) randomDouble(4, 16), 'd'); // distance (weight value)
+                if (self.directed) {
+                    for (int h = 0; h < self.connections -> length; h += 3) {
+                        if (self.connections -> data[h].i == j && self.connections -> data[h + 1].i == i) {
+                            list_append(self.connections, self.connections -> data[h + 2], 'd');
+                            eligible = 1;
+                            break;
+                        }
+                    }
+                }
+                if (!eligible) {
+                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd'); // distance (weight value)
+                }
                 list_append(self.adjacentcyList -> data[i].r, (unitype) j, 'i'); // update adjacentcy list
                 if (self.directed == 0) {
                     list_append(self.adjacentcyList -> data[j].r, (unitype) i, 'i'); // if not directed then do both
@@ -231,6 +250,19 @@ void stepGraph_t(Graph_t *selfp) {
 void renderGraph(Graph_t *selfp) { // renders the nodes
     Graph_t self = *selfp;
     for (int i = self.xpos -> length - 1; i > -1; i--) {
+        switch (self.shape -> data[i].c) {
+            case 0:
+            turtlePenShape("circle");
+            break;
+            case 1:
+            turtlePenShape("square");
+            break;
+            case 2:
+            turtlePenShape("square");
+            break;
+            default:
+            turtlePenShape("circle");
+        }
         if (self.selected == i) {
             turtleGoto((self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize);
             turtlePenColor(120, 120, 120);
@@ -254,6 +286,7 @@ void renderGraph(Graph_t *selfp) { // renders the nodes
         turtlePenColor(30, 30, 30);
         textGLWriteString(self.text -> data[i].s, (self.xpos -> data[i].d + self.screenX) * self.screenSize, (self.ypos -> data[i].d + self.screenY) * self.screenSize, self.size -> data[i].d * 0.6 * self.screenSize, 50);
     }
+    turtlePenShape("circle");
     // *selfp = self; // no need to restoring
 }
 
@@ -450,18 +483,39 @@ void mouseTick(Graph_t *selfp) {
             if (self.selectMode == 4 && self.wireStart != -1 && self.wireEnd != -1) {
                 char found = 0;
                 for (int i = 0; i < self.connections -> length; i += 3) {
-                    if ((self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) || (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd)) {
-                        list_delete(self.connections, i);
-                        list_delete(self.connections, i);
-                        list_delete(self.connections, i);
-                        found = 1;
-                        break;
+                    if (self.directed) {
+                        if (self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) {
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            found = 1;
+                            break;
+                        }
+                    } else {
+                        if ((self.connections -> data[i].i == self.wireStart && self.connections -> data[i + 1].i == self.wireEnd) || (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd)) {
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            list_delete(self.connections, i);
+                            found = 1;
+                            break;
+                        }
                     }
                 }
                 if (!found) {
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
-                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
+                    if (self.directed) {
+                        for (int i = 0; i < self.connections -> length; i += 3) {
+                            if (self.connections -> data[i + 1].i == self.wireStart && self.connections -> data[i].i == self.wireEnd) {
+                                list_append(self.connections, self.connections -> data[i + 2], 'd');
+                                found = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
+                    }
                     list_append(self.adjacentcyList -> data[self.wireStart].r, (unitype) self.wireEnd, 'i'); // update adjacentcy list
                     if (self.directed == 0) {
                         list_append(self.adjacentcyList -> data[self.wireEnd].r, (unitype) self.wireStart, 'i'); // if not directed then do both
@@ -625,6 +679,7 @@ void hotkeyTick(Graph_t *selfp) {
             list_append(self.size, (unitype) randomDouble((100 / log(150)), (150 / log(150))), 'd');
             list_append(self.shape, (unitype) 0, 'c'); // 0 - circle, 1 - square, 2 - rectangle
             list_append(self.text, (unitype) num, 's');
+            list_append(self.adjacentcyList, (unitype) list_init(), 'r');
             self.focalCSX = self.xpos -> data[self.selected].d;
             self.focalCSY = self.ypos -> data[self.selected].d;
             self.focalX = self.mouseX - (self.focalCSX + self.screenX) * self.screenSize;
