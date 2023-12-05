@@ -24,10 +24,10 @@ typedef struct {
     double scrollSpeed;
     double specColor[15]; // colours for start and end
     char keys[12]; // for keybinds
-    signed char selected;
     char selectMode;
     char showDistances; // toggle showing or hiding distance numbers
     char changeDistances; // toggle changing distance relative to total distance
+    int selected;
     int wireStart;
     int wireEnd;
     list_t *connections; // AoS - node1, node2, distance

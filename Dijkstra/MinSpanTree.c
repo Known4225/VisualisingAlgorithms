@@ -2,9 +2,9 @@
 #include <time.h>
 
 /*
-This is a modification of the VanDeGraaph Generator to apply pathfinding algorithms
-It's essentially a more polished version of the Dijkstra program
-It also has heuristic capabilities
+This was to test a question on algorithms homework.
+I did not finish it when it became apparent that the answer to the question was:
+"it would not work"
 */
 
 typedef struct {
