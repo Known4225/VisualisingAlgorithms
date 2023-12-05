@@ -230,7 +230,7 @@ void init(Graph_t *selfp, int nodeCount) {
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
     self.wireStart = -1;
-    self.showDistances = 1;
+    self.showDistances = 0;
     self.changeDistances = 0;
     self.completedDFS = 0;
 
@@ -363,16 +363,17 @@ void renderConnections(Graph_t *selfp) { // renders the connections between node
             if (x2 > x1) {
                 theta += 3.141592;
             }
-            x1 = x2 + cos(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
-            y1 = y2 + sin(theta) * (self.size -> data[self.connections -> data[i + 1].i].d - 2) * self.screenSize;
+            double destSize = (self.size -> data[self.connections -> data[i + 1].i].d - 2);
+            x1 = x2 + cos(theta) * destSize * self.screenSize;
+            y1 = y2 + sin(theta) * destSize * self.screenSize;
             turtleGoto(x1, y1);
             theta += 0.785398; // 45 degrees
-            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+            turtleGoto(x1 + cos(theta) * destSize * 0.5 * self.screenSize, y1 + sin(theta) * destSize * 0.5 * self.screenSize);
             theta -= 0.785398 * 2;
             turtlePenUp();
             turtleGoto(x1, y1);
             turtlePenDown();
-            turtleGoto(x1 + cos(theta) * 6 * self.screenSize, y1 + sin(theta) * 6 * self.screenSize);
+            turtleGoto(x1 + cos(theta) * destSize * 0.5 * self.screenSize, y1 + sin(theta) * destSize * 0.5 * self.screenSize);
         } else {
             turtleGoto((self.xpos -> data[self.connections -> data[i + 1].i].d + self.screenX) * self.screenSize, (self.ypos -> data[self.connections -> data[i + 1].i].d + self.screenY) * self.screenSize);
         }
