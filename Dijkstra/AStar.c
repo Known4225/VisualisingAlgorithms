@@ -291,7 +291,7 @@ void stepAStar(AStar *selfp) {
                 }
             } 
         }
-        list_print(headNeighbors);
+        // list_print(headNeighbors);
         for (int i = 0; i < headNeighbors -> length; i += 2) {
             int visited = 0;
             for (int j = 0; j < self.queue -> length; j += 4) { // check if in queue
@@ -652,7 +652,8 @@ void mouseTick(AStar *selfp) {
                 if (!found) {
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
-                    list_append(self.connections, (unitype) randomDouble(4, 16), 'd');
+                    double minimumB = heuristic(&self, self.wireStart, self.wireEnd);
+                    list_append(self.connections, (unitype) randomDouble(minimumB, minimumB + 12), 'd');
                 }
             }
             if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
