@@ -54,7 +54,7 @@ extern inline double randomDouble(double lowerBound, double upperBound) { // ran
 
 void init(Graph_t *selfp, int nodeCount) {
     Graph_t self = *selfp;
-    self.directed = 0;
+    self.directed = 1;
     /* create nodes */
     int numTries = 10000;
     self.xpos = list_init();
@@ -545,6 +545,12 @@ void mouseTick(Graph_t *selfp) {
                             list_delete(self.connections, i);
                             list_delete(self.connections, i);
                             list_delete(self.connections, i);
+                            for (int j = 0; j < self.adjacentcyList -> data[self.wireStart].r -> length; j++) {
+                                if (self.adjacentcyList -> data[self.wireStart].r -> data[j].i == self.wireEnd) {
+                                    list_delete(self.adjacentcyList -> data[self.wireStart].r, j);
+                                    break;
+                                }
+                            }
                             found = 1;
                             break;
                         }
@@ -553,6 +559,18 @@ void mouseTick(Graph_t *selfp) {
                             list_delete(self.connections, i);
                             list_delete(self.connections, i);
                             list_delete(self.connections, i);
+                            for (int j = 0; j < self.adjacentcyList -> data[self.wireStart].r -> length; j++) {
+                                if (self.adjacentcyList -> data[self.wireStart].r -> data[j].i == self.wireEnd) {
+                                    list_delete(self.adjacentcyList -> data[self.wireStart].r, j);
+                                    break;
+                                }
+                            }
+                            for (int j = 0; j < self.adjacentcyList -> data[self.wireEnd].r -> length; j++) {
+                                if (self.adjacentcyList -> data[self.wireEnd].r -> data[j].i == self.wireStart) {
+                                    list_delete(self.adjacentcyList -> data[self.wireEnd].r, j);
+                                    break;
+                                }
+                            }
                             found = 1;
                             break;
                         }
