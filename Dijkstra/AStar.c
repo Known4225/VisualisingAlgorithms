@@ -289,6 +289,7 @@ void stepAStar(AStar *selfp) {
                 }
             } 
         }
+        list_print(headNeighbors);
         for (int i = 0; i < headNeighbors -> length; i += 2) {
             int visited = 0;
             for (int j = 0; j < self.queue -> length; j += 4) { // check if in queue
@@ -362,7 +363,7 @@ void stepAStar(AStar *selfp) {
         list_delete(self.queue, 0);
         if (self.queue -> length == 0 || self.completed -> data[self.completed -> length - 4].i == self.end) {
             if (self.completed -> data[self.completed -> length - 4].i != self.end) {
-                //printf("no path found\n");
+                // printf("no path found\n");
             }
             //printf("finished!\n");
             self.finishedAStar = 1;
