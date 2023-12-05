@@ -24,7 +24,7 @@ typedef struct {
     double scrollSpeed;
     double specColor[15]; // colours for start and end
     char keys[12]; // for keybinds
-    char selected;
+    signed char selected;
     char selectMode;
     char showDistances; // toggle showing or hiding distance numbers
     char changeDistances; // toggle changing distance relative to total distance
@@ -229,7 +229,6 @@ void init(Graph_t *selfp, int nodeCount) {
     self.focalCSX = 0;
     self.focalCSY = 0;
     self.scrollSpeed = 1.15;
-    self.wireStart = -1;
     self.showDistances = 0;
     self.changeDistances = 0;
     self.completedDFS = 0;
