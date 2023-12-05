@@ -657,10 +657,17 @@ void mouseTick(AStar *selfp) {
                     }
                 }
                 if (!found) {
+                    int com = self.connections -> length;
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
                     double minimumB = heuristic(&self, self.wireStart, self.wireEnd);
                     list_append(self.connections, (unitype) randomDouble(minimumB, minimumB + 12), 'd');
+                    if (self.changeDistances == 1) {
+                        self.connections -> data[com + 2].d = (self.connections -> data[com + 2].d / sqrt((self.xpos -> data[self.connections -> data[com].i].d - self.xpos -> data[self.connections -> data[com + 1].i].d) * 
+                                                                                                  (self.xpos -> data[self.connections -> data[com].i].d - self.xpos -> data[self.connections -> data[com + 1].i].d) + 
+                                                                                                  (self.ypos -> data[self.connections -> data[com].i].d - self.ypos -> data[self.connections -> data[com + 1].i].d) * 
+                                                                                                  (self.ypos -> data[self.connections -> data[com].i].d - self.ypos -> data[self.connections -> data[com + 1].i].d)));
+                    }
                 }
             }
             if (self.selected != -1 && fabs(self.xpos -> data[self.selected].d - self.focalCSX) < 0.01 && fabs(self.ypos -> data[self.selected].d - self.focalCSY) < 0.01) {
