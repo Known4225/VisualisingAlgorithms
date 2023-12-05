@@ -226,7 +226,7 @@ void init(AStar *selfp, int nodeCount) {
     self.scrollSpeed = 1.15;
     self.wireStart = -1;
     self.showDistances = 1;
-    self.changeDistances = 0;
+    self.changeDistances = 1;
 
     /* AStar */
     self.start = -1;
