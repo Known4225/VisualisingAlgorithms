@@ -321,12 +321,12 @@ void stepAStar(AStar *selfp) {
                     }
                 }
             } else {
-                for (int j = 0; j < self.completed -> length; j += 4) { // check if in completed
-                    if (self.completed -> data[j].i == headNeighbors -> data[i].i) {
-                        visited = 1;
-                        break;
-                    }
-                }
+                // for (int j = 0; j < self.completed -> length; j += 4) { // check if in completed (DO NOT)
+                //     if (self.completed -> data[j].i == headNeighbors -> data[i].i) {
+                //         visited = 1;
+                //         break;
+                //     }
+                // }
                 if (!visited) { // is not in queue or completed lists
                     double h = self.heuristic -> data[headNeighbors -> data[i].i].d;
                     list_append(self.queue, (unitype) headNeighbors -> data[i].i, 'i');

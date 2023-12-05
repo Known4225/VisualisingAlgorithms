@@ -314,7 +314,7 @@ void stepDijkstra(Dijkstra *selfp) {
                     }
                 }
             } else {
-                for (int j = 0; j < self.completed -> length; j += 3) { // check if in completed
+                for (int j = 0; j < self.completed -> length; j += 3) { // check if in completed (DO NOT)
                     if (self.completed -> data[j].i == headNeighbors -> data[i].i) {
                         visited = 1;
                         break;
