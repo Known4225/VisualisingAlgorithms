@@ -2,7 +2,7 @@
 #include <time.h>
 
 /*
-This is for generic graph projects
+Depth first search
 */
 
 typedef struct {
