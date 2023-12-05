@@ -197,7 +197,7 @@ void init(AStar *selfp, int nodeCount) {
                 list_append(self.connections, (unitype) i, 'i'); // adds i and j after, signifying that they are connected
                 list_append(self.connections, (unitype) j, 'i');
                 /* to ensure the heuristic is admissable, the lowerbound of the double may not be less than the distance between the nodes divided by 10 */
-                double minimumB = heuristic(&self, i, j);
+                double minimumB = heuristic(&self, i, j) / 10;
                 list_append(self.connections, (unitype) randomDouble(minimumB, minimumB + 12), 'd'); // distance (weight value)
             }
         }
@@ -652,7 +652,7 @@ void mouseTick(AStar *selfp) {
                 if (!found) {
                     list_append(self.connections, (unitype) self.wireStart, 'i'); // add a new connection
                     list_append(self.connections, (unitype) self.wireEnd, 'i');
-                    double minimumB = heuristic(&self, self.wireStart, self.wireEnd);
+                    double minimumB = heuristic(&self, self.wireStart, self.wireEnd) / 10;
                     list_append(self.connections, (unitype) randomDouble(minimumB, minimumB + 12), 'd');
                 }
             }
