@@ -17,4 +17,6 @@ Press C to clear nodes
 Press R to stop Dijkstra
 Press Q to regenerate new graph
 Press 1 to summon a node
+Press X to delete a node
+Press D to toggle distance changing
 Hold Shift and drag from a node to another to create a connection
