@@ -900,7 +900,6 @@ void hotkeyTick(AStar *selfp) {
 }
 
 int main(int argc, char *argv[]) {
-    GLFWwindow* window;
     /* Initialize glfw */
     if (!glfwInit()) {
         return -1;
@@ -908,12 +907,15 @@ int main(int argc, char *argv[]) {
     glfwWindowHint(GLFW_SAMPLES, 4); // MSAA (Anti-Aliasing) with 4 samples (must be done before window is created (?))
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(1280, 720, "AStar", NULL, NULL);
+    const GLFWvidmode *monitorSize = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    int32_t windowHeight = monitorSize -> height * 0.85;
+    GLFWwindow *window = glfwCreateWindow(windowHeight * 16 / 9, windowHeight, "AStar", NULL, NULL);
     if (!window) {
         glfwTerminate();
+        return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetWindowSizeLimits(window, GLFW_DONT_CARE, GLFW_DONT_CARE, 1280, 720);
+    glfwSetWindowSizeLimits(window, windowHeight * 16 / 9, windowHeight, windowHeight * 16 / 9, windowHeight);
 
     /* initialize turtle */
     turtleInit(window, -320, -180, 320, 180);
